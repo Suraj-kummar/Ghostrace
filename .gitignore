@@ -1,0 +1,9 @@
+.backup_for_commits/
+make_commits.py
+__pycache__/
+*.pyc
+.pytest_cache/
+ghostrace.egg-info/
+.venv/
+venv/
+*.log
