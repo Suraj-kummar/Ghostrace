@@ -21,18 +21,26 @@ Nesting: the innermost open session wins — inner events attach to the
 inner session. When the inner session closes, events revert to the outer.
 """
 from __future__ import annotations
+
 import uuid
 from contextvars import ContextVar, Token
 from datetime import datetime, timezone
 from typing import Dict, Optional
-_SESSION_STACK: ContextVar[list[str]] = ContextVar('_ghostrace_session_stack', default=[])
-_SESSION_REGISTRY: Dict[str, 'Session'] = {}
+
+# Stack of session IDs (innermost last)
+_SESSION_STACK: ContextVar[list[str]] = ContextVar("_ghostrace_session_stack", default=[])
+_SESSION_REGISTRY: Dict[str, "Session"] = {}
+
 
 def get_current_session_id() -> Optional[str]:
-    pass
+    """Return the innermost open session ID, or None."""
+    stack = _SESSION_STACK.get()
+    return stack[-1] if stack else None
 
-def get_session(session_id: str) -> Optional['Session']:
-    pass
+
+def get_session(session_id: str) -> Optional["Session"]:
+    return _SESSION_REGISTRY.get(session_id)
+
 
 class Session:
     """
@@ -46,32 +54,77 @@ class Session:
         ended_at:   UTC timestamp when the session closed (set on exit).
     """
 
-    def __init__(self, name: Optional[str]=None, session_id: Optional[str]=None) -> None:
-        pass
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> None:
+        self.id: str = session_id or str(uuid.uuid4())
+        self.name: Optional[str] = name
+        self.tags: Dict[str, str] = {}
+        self.started_at: datetime = datetime.now(timezone.utc)
+        self.ended_at: Optional[datetime] = None
 
-    def tag(self, key: str, value: str) -> 'Session':
-        pass
+        # contextvars token — used to restore previous stack on exit
+        self._token: Optional[Token[list[str]]] = None
 
-    def __enter__(self) -> 'Session':
-        pass
+    # ── Tag API ──────────────────────────────────────────────────────────────
+
+    def tag(self, key: str, value: str) -> "Session":
+        """Attach a key/value tag to this session (chainable)."""
+        self.tags[key] = str(value)
+        return self
+
+    # ── Sync context manager ─────────────────────────────────────────────────
+
+    def __enter__(self) -> "Session":
+        self._open()
+        return self
 
     def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
-        pass
+        self._close(error=exc_type is not None)
 
-    async def __aenter__(self) -> 'Session':
-        pass
+    # ── Async context manager ────────────────────────────────────────────────
+
+    async def __aenter__(self) -> "Session":
+        self._open()
+        return self
 
     async def __aexit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
-        pass
+        self._close(error=exc_type is not None)
+
+    # ── Internal ─────────────────────────────────────────────────────────────
 
     def _open(self) -> None:
-        pass
+        current_stack = _SESSION_STACK.get()[:]  # copy
+        current_stack.append(self.id)
+        self._token = _SESSION_STACK.set(current_stack)
+        _SESSION_REGISTRY[self.id] = self
 
-    def _close(self, *, error: bool=False) -> None:
-        pass
+    def _close(self, *, error: bool = False) -> None:
+        self.ended_at = datetime.now(timezone.utc)
+
+        # Flush to collector
+        try:
+            from .collector import get_collector
+
+            get_collector().flush_session(self, error=error)
+        except Exception:  # noqa: BLE001
+            pass
+
+        # Pop this session off the stack
+        if self._token is not None:
+            _SESSION_STACK.reset(self._token)
+
+        _SESSION_REGISTRY.pop(self.id, None)
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
 
     def duration_ms(self) -> Optional[int]:
-        pass
+        if self.ended_at:
+            delta = self.ended_at - self.started_at
+            return int(delta.total_seconds() * 1000)
+        return None
 
     def __repr__(self) -> str:
-        pass
+        return f"Session(id={self.id!r}, name={self.name!r})"
