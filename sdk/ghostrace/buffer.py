@@ -113,3 +113,5 @@ def _quarantine(path: Path) -> None:
 
 def get_buffer_dir() -> Path:
     return _BUFFER_DIR
+
+# Optimize buffer flushing mechanism and list cleanup

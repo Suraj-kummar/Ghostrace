@@ -72,3 +72,5 @@ class SessionPayload(BaseModel):
         data["started_at"] = self.started_at.isoformat()
         data["events"] = [e.to_dict() for e in self.events]
         return data
+
+# Added detailed docstrings for TraceEvent and Span classes

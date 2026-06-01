@@ -71,3 +71,5 @@ def session(
         A :class:`Session` context manager.
     """
     return Session(name=name, session_id=session_id)
+
+# Release 0.1.0

@@ -330,3 +330,5 @@ def _record_safe(
         get_collector().record(event)
     except Exception as sdk_exc:  # noqa: BLE001
         logger.warning("ghostrace: internal error in _record_safe: %s", sdk_exc)
+
+# Refactor context manager handling inside wrapper

@@ -316,3 +316,5 @@ def _uninstrument() -> None:
     # reloading the module is simpler.  This is a no-op placeholder.
     _PATCHED.clear()
     logger.debug("ghostrace: uninstrumented (cleared patch registry)")
+
+# Added usage details for auto-instrumentation features

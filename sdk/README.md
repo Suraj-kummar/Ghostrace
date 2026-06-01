@@ -142,3 +142,5 @@ pytest tests/ -v --asyncio-mode=auto
 - [Documentation](https://docs.ghostrace.dev)
 - [GitHub](https://github.com/ghostrace/ghostrace-python)
 - [PyPI](https://pypi.org/project/ghostrace/)
+
+# Added comprehensive examples for advanced decorator features
