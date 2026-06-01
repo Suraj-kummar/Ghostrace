@@ -7,3 +7,4 @@ ghostrace.egg-info/
 .venv/
 venv/
 *.log
+*.db
