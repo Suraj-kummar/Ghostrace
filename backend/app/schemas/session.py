@@ -23,8 +23,19 @@ class SessionIngest(BaseModel):
     events: List[TraceEventIngest] = Field(default_factory=list)
 
 
+class LoopInfo(BaseModel):
+    """Details about a single detected loop pattern within a session."""
+    kind: str                   # "llm_prompt" | "tool_call" | "consecutive_model"
+    description: str
+    event_ids: List[str]
+    repeat_count: int
+    severity: str               # "warning" | "critical"
+
+
 class SessionResponse(SessionBase):
     created_at: datetime
     events: List[TraceEventResponse] = Field(default_factory=list)
+    loop_detected: bool = False
+    loop_info: List[LoopInfo] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
