@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     # ── CORS ──────────────────────────────────────────────────────────────────
     allowed_origins: List[str] = [
         "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
         "https://app.ghostrace.dev",
     ]
 
