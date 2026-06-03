@@ -1,4 +1,6 @@
-const API_BASE_URL = "http://localhost:8000";
+// Use relative URLs so Vite's dev proxy forwards requests to the backend.
+// This eliminates all CORS issues during development.
+const API_BASE_URL = "";
 
 interface RequestOptions extends RequestInit {
   auth?: boolean;
