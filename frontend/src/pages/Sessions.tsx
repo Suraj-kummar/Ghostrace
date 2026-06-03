@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
-import { 
-  Search, Database, DollarSign, Clock, AlertCircle, 
-  ChevronRight, RefreshCw, BarChart2, Tag 
+import {
+  Search, Database, DollarSign, Clock, AlertCircle,
+  ChevronRight, RefreshCw, BarChart2, Tag, TrendingUp, Zap
 } from "lucide-react";
 
 interface SessionsProps {
@@ -14,7 +14,7 @@ export function Sessions({ projectId }: SessionsProps) {
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all"); // all, error, success
+  const [filterType, setFilterType] = useState("all");
 
   const fetchSessions = async () => {
     if (!projectId) return;
@@ -33,132 +33,147 @@ export function Sessions({ projectId }: SessionsProps) {
     fetchSessions();
   }, [projectId]);
 
-  // Calculations for summary metrics
-  let totalCost = 0;
-  let totalTokens = 0;
-  let totalLatency = 0;
-  let latencyCount = 0;
-  let errorCount = 0;
+  let totalCost = 0, totalTokens = 0, totalLatency = 0,
+    latencyCount = 0, errorCount = 0;
 
   sessions.forEach((s) => {
     let sessionHasError = false;
     s.events?.forEach((e: any) => {
-      if (e.event_type === "error" || e.error_type) {
-        sessionHasError = true;
-      }
+      if (e.event_type === "error" || e.error_type) sessionHasError = true;
       if (e.cost_usd) totalCost += e.cost_usd;
       if (e.tokens_in) totalTokens += e.tokens_in;
       if (e.tokens_out) totalTokens += e.tokens_out;
-      if (e.latency_ms) {
-        totalLatency += e.latency_ms;
-        latencyCount++;
-      }
+      if (e.latency_ms) { totalLatency += e.latency_ms; latencyCount++; }
     });
-    if (sessionHasError) {
-      errorCount++;
-    }
+    if (sessionHasError) errorCount++;
   });
 
   const avgLatency = latencyCount > 0 ? Math.round(totalLatency / latencyCount) : 0;
 
-  // Filter sessions
   const filteredSessions = sessions.filter((s) => {
-    // 1. Search term check
-    const matchesSearch = 
+    const tags = s.tags ?? {};
+    const matchesSearch =
       s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      Object.keys(s.tags).some(
-        (key) => 
-          key.toLowerCase().includes(searchTerm.toLowerCase()) || 
-          s.tags[key].toLowerCase().includes(searchTerm.toLowerCase())
+      Object.keys(tags).some(
+        (key) =>
+          key.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          String(tags[key]).toLowerCase().includes(searchTerm.toLowerCase())
       );
-
     if (!matchesSearch) return false;
-
-    // 2. Error/Success check
     const sessionHasError = s.events?.some((e: any) => e.event_type === "error" || e.error_type);
     if (filterType === "error") return sessionHasError;
     if (filterType === "success") return !sessionHasError;
     return true;
   });
 
-  const formatTokens = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}m`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
-    return num.toString();
+  const formatTokens = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+    return n.toString();
   };
-
-  const formatCost = (num: number) => {
-    if (num === 0) return "$0.00";
-    if (num < 0.01) return `$${num.toFixed(4)}`;
-    return `$${num.toFixed(2)}`;
+  const formatCost = (n: number) => {
+    if (n === 0) return "$0.00";
+    if (n < 0.01) return `$${n.toFixed(4)}`;
+    return `$${n.toFixed(2)}`;
   };
-
   const formatLatency = (ms: number) => {
     if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
     return `${ms}ms`;
   };
 
+  const metrics = [
+    {
+      icon: <BarChart2 size={18} />,
+      iconColor: "#818cf8",
+      iconBg: "rgba(99,102,241,0.12)",
+      label: "Total Sessions",
+      value: sessions.length.toString(),
+      sub: errorCount > 0 ? `${errorCount} errored` : "All clean",
+      subColor: errorCount > 0 ? "var(--color-error)" : "var(--color-success)",
+    },
+    {
+      icon: <DollarSign size={18} />,
+      iconColor: "#34d399",
+      iconBg: "rgba(16,185,129,0.12)",
+      label: "Total Cost",
+      value: formatCost(totalCost),
+      sub: "All models combined",
+      subColor: "var(--text-muted)",
+    },
+    {
+      icon: <Database size={18} />,
+      iconColor: "#38bdf8",
+      iconBg: "rgba(56,189,248,0.12)",
+      label: "Total Tokens",
+      value: formatTokens(totalTokens),
+      sub: "Prompt + Output",
+      subColor: "var(--text-muted)",
+    },
+    {
+      icon: <Clock size={18} />,
+      iconColor: "#fbbf24",
+      iconBg: "rgba(245,158,11,0.12)",
+      label: "Avg Latency",
+      value: formatLatency(avgLatency),
+      sub: "Per trace execution",
+      subColor: "var(--text-muted)",
+    },
+  ];
+
   return (
     <div style={styles.container} className="animated-fade-in">
-      <div style={styles.header}>
+      {/* ── Page header ── */}
+      <div style={styles.pageHeader}>
         <div>
           <h1 style={styles.pageTitle}>Sessions Explorer</h1>
-          <p style={styles.pageSubtitle}>Monitor runs, view latencies, error states, and token cost details.</p>
+          <p style={styles.pageSub}>
+            Monitor agent runs, trace token costs, latencies, and error states.
+          </p>
         </div>
-        <button className="btn btn-secondary" onClick={fetchSessions} disabled={loading} style={styles.refreshBtn}>
-          <RefreshCw size={14} className={loading ? "spin" : ""} style={styles.refreshIcon} />
+        <button
+          className="btn btn-secondary"
+          onClick={fetchSessions}
+          disabled={loading}
+          style={styles.refreshBtn}
+        >
+          <RefreshCw size={14} className={loading ? "spin" : ""} />
           Refresh
         </button>
       </div>
 
-      {/* Metrics Banner */}
+      {/* ── Metric cards ── */}
       <div style={styles.metricsGrid}>
-        <div className="card" style={styles.metricCard}>
-          <div style={styles.metricHeader}>
-            <BarChart2 size={16} style={{ color: "var(--color-primary)" }} />
-            <span style={styles.metricLabel}>Total Sessions</span>
+        {metrics.map((m, i) => (
+          <div
+            key={i}
+            className="card"
+            style={{ ...styles.metricCard, animationDelay: `${i * 60}ms` }}
+          >
+            {/* Colored top stripe */}
+            <div style={{ ...styles.metricAccent, background: m.iconColor, opacity: 0.7 }} />
+            <div style={styles.metricBody}>
+              <div style={{ ...styles.metricIconWrap, background: m.iconBg }}>
+                <span style={{ color: m.iconColor }}>{m.icon}</span>
+              </div>
+              <div style={styles.metricInfo}>
+                <span style={styles.metricLabel}>{m.label}</span>
+                <span style={styles.metricValue}>{m.value}</span>
+                <span style={{ ...styles.metricSub, color: m.subColor }}>{m.sub}</span>
+              </div>
+            </div>
           </div>
-          <span style={styles.metricValue}>{sessions.length}</span>
-          <span style={styles.metricSub}>{errorCount} errored runs</span>
-        </div>
-
-        <div className="card" style={styles.metricCard}>
-          <div style={styles.metricHeader}>
-            <DollarSign size={16} style={{ color: "var(--color-success)" }} />
-            <span style={styles.metricLabel}>Aggregated Cost</span>
-          </div>
-          <span style={styles.metricValue}>{formatCost(totalCost)}</span>
-          <span style={styles.metricSub}>All models included</span>
-        </div>
-
-        <div className="card" style={styles.metricCard}>
-          <div style={styles.metricHeader}>
-            <Database size={16} style={{ color: "var(--color-info)" }} />
-            <span style={styles.metricLabel}>Total Tokens</span>
-          </div>
-          <span style={styles.metricValue}>{formatTokens(totalTokens)}</span>
-          <span style={styles.metricSub}>Prompt + Output</span>
-        </div>
-
-        <div className="card" style={styles.metricCard}>
-          <div style={styles.metricHeader}>
-            <Clock size={16} style={{ color: "var(--color-warning)" }} />
-            <span style={styles.metricLabel}>Average Latency</span>
-          </div>
-          <span style={styles.metricValue}>{formatLatency(avgLatency)}</span>
-          <span style={styles.metricSub}>Per trace execution</span>
-        </div>
+        ))}
       </div>
 
-      {/* Filters bar */}
+      {/* ── Filters ── */}
       <div style={styles.filtersBar}>
         <div style={styles.searchWrapper}>
-          <Search size={16} style={styles.searchIcon} />
+          <Search size={15} style={styles.searchIcon} />
           <input
             className="input-field"
             type="text"
-            placeholder="Search by session name, ID, or tags..."
+            placeholder="Search by name, ID, or tags…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={styles.searchInput}
@@ -166,140 +181,169 @@ export function Sessions({ projectId }: SessionsProps) {
         </div>
 
         <div style={styles.filterGroup}>
-          <button
-            style={{
-              ...styles.filterBtn,
-              backgroundColor: filterType === "all" ? "var(--bg-surface-hover)" : "transparent",
-              color: filterType === "all" ? "var(--text-primary)" : "var(--text-secondary)",
-            }}
-            onClick={() => setFilterType("all")}
-          >
-            All Runs
-          </button>
-          <button
-            style={{
-              ...styles.filterBtn,
-              backgroundColor: filterType === "success" ? "var(--bg-surface-hover)" : "transparent",
-              color: filterType === "success" ? "var(--text-primary)" : "var(--text-secondary)",
-            }}
-            onClick={() => setFilterType("success")}
-          >
-            Success
-          </button>
-          <button
-            style={{
-              ...styles.filterBtn,
-              backgroundColor: filterType === "error" ? "var(--bg-surface-hover)" : "transparent",
-              color: filterType === "error" ? "var(--text-primary)" : "var(--text-secondary)",
-            }}
-            onClick={() => setFilterType("error")}
-          >
-            Errors
-          </button>
+          {["all", "success", "error"].map((f) => (
+            <button
+              key={f}
+              style={{
+                ...styles.filterBtn,
+                background: filterType === f ? "var(--color-primary-glow)" : "transparent",
+                color: filterType === f ? "var(--color-primary-light)" : "var(--text-secondary)",
+                borderColor: filterType === f ? "rgba(99,102,241,0.3)" : "transparent",
+              }}
+              onClick={() => setFilterType(f)}
+            >
+              {f === "all" ? "All runs" : f === "success" ? "✓ Success" : "✗ Errors"}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Sessions list */}
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.tableHeaderRow}>
-              <th style={styles.th}>Session Name / ID</th>
-              <th style={styles.th}>Status</th>
-              <th style={styles.th}>Tags</th>
-              <th style={styles.th}>Events</th>
-              <th style={styles.th}>Tokens</th>
-              <th style={styles.th}>Cost</th>
-              <th style={styles.th}>Duration</th>
-              <th style={{ ...styles.th, textAlign: "right" }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} style={styles.tableFeedback}>
-                  Loading sessions...
-                </td>
-              </tr>
-            ) : filteredSessions.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={styles.tableFeedback}>
-                  No tracing sessions found. Ensure the SDK is configured correctly.
-                </td>
-              </tr>
-            ) : (
-              filteredSessions.map((session) => {
-                const sessionHasError = session.events?.some(
-                  (e: any) => e.event_type === "error" || e.error_type
-                );
-                
-                // Accumulators
-                let sessionCost = 0;
-                let sessionTokens = 0;
-                let sessionLatency = 0;
-                let sessionLatencyCount = 0;
+      {/* ── Table ── */}
+      <div className="card" style={styles.tableCard}>
+        {/* Table header */}
+        <div style={styles.tableHeader}>
+          <span style={styles.tableHeaderCell}>Session</span>
+          <span style={styles.tableHeaderCell}>Status</span>
+          <span style={styles.tableHeaderCell}>Tags</span>
+          <span style={styles.tableHeaderCell}>Events</span>
+          <span style={styles.tableHeaderCell}>Tokens</span>
+          <span style={styles.tableHeaderCell}>Cost</span>
+          <span style={styles.tableHeaderCell}>Duration</span>
+          <span style={{ ...styles.tableHeaderCell, textAlign: "right" }}>Actions</span>
+        </div>
 
-                session.events?.forEach((e: any) => {
-                  if (e.cost_usd) sessionCost += e.cost_usd;
-                  if (e.tokens_in) sessionTokens += e.tokens_in;
-                  if (e.tokens_out) sessionTokens += e.tokens_out;
-                  if (e.latency_ms) {
-                    sessionLatency += e.latency_ms;
-                    sessionLatencyCount++;
-                  }
-                });
+        {/* Rows */}
+        <div style={styles.tableBody}>
+          {loading ? (
+            /* Skeleton loading rows */
+            [...Array(4)].map((_, i) => (
+              <div key={i} style={styles.skeletonRow}>
+                {[40, 15, 20, 8, 12, 10, 12, 10].map((w, j) => (
+                  <div key={j} className="skeleton" style={{ width: `${w}%`, height: 14, borderRadius: 6 }} />
+                ))}
+              </div>
+            ))
+          ) : filteredSessions.length === 0 ? (
+            <div style={styles.emptyState}>
+              <div style={styles.emptyIcon}>
+                <Zap size={28} style={{ color: "var(--text-muted)" }} />
+              </div>
+              <p style={styles.emptyTitle}>No sessions found</p>
+              <p style={styles.emptyDesc}>
+                {sessions.length === 0
+                  ? "Instrument your agents with the SDK to start capturing traces."
+                  : "Try adjusting your search or filter."}
+              </p>
+            </div>
+          ) : (
+            filteredSessions.map((session, idx) => {
+              const sessionHasError = session.events?.some(
+                (e: any) => e.event_type === "error" || e.error_type
+              );
+              let sessionCost = 0, sessionTokens = 0, sessionLatency = 0;
+              session.events?.forEach((e: any) => {
+                if (e.cost_usd) sessionCost += e.cost_usd;
+                if (e.tokens_in) sessionTokens += e.tokens_in;
+                if (e.tokens_out) sessionTokens += e.tokens_out;
+                if (e.latency_ms) sessionLatency += e.latency_ms;
+              });
 
-                return (
-                  <tr key={session.id} style={styles.tr}>
-                    <td style={styles.td}>
-                      <Link to={`/sessions/${session.id}`} style={styles.sessionLink}>
-                        <span style={styles.sessionName}>
-                          {session.name || "Unnamed Session"}
+              return (
+                <div
+                  key={session.id}
+                  style={{
+                    ...styles.tableRow,
+                    animationDelay: `${idx * 30}ms`,
+                  }}
+                  className="animated-fade-in"
+                >
+                  {/* Session name/id */}
+                  <div style={styles.tableCell}>
+                    <Link to={`/sessions/${session.id}`} style={styles.sessionLink}>
+                      <span style={styles.sessionName}>{session.name || "Unnamed Session"}</span>
+                      <code style={styles.sessionId}>{session.id.substring(0, 18)}…</code>
+                    </Link>
+                  </div>
+
+                  {/* Status */}
+                  <div style={styles.tableCell}>
+                    {sessionHasError ? (
+                      <span className="badge badge-error" style={{ gap: 5 }}>
+                        <AlertCircle size={11} />
+                        Error
+                      </span>
+                    ) : (
+                      <span className="badge badge-success" style={{ gap: 5 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-success)", display: "inline-block" }} />
+                        Success
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Tags */}
+                  <div style={styles.tableCell}>
+                    <div style={styles.tagsRow}>
+                      {Object.entries(session.tags ?? {}).slice(0, 2).map(([k, v]) => (
+                        <span key={k} style={styles.tagChip}>
+                          <Tag size={9} />
+                          {k}:{String(v)}
                         </span>
-                        <code style={styles.sessionId}>{session.id.substring(0, 18)}...</code>
-                      </Link>
-                    </td>
-                    <td style={styles.td}>
-                      {sessionHasError ? (
-                        <span className="badge badge-error" style={styles.statusBadge}>
-                          <AlertCircle size={12} style={{ marginRight: 4 }} />
-                          Error
-                        </span>
-                      ) : (
-                        <span className="badge badge-success" style={styles.statusBadge}>
-                          Success
+                      ))}
+                      {Object.keys(session.tags ?? {}).length > 2 && (
+                        <span style={styles.tagMore}>
+                          +{Object.keys(session.tags ?? {}).length - 2}
                         </span>
                       )}
-                    </td>
-                    <td style={styles.td}>
-                      <div style={styles.tagsContainer}>
-                        {Object.entries(session.tags).slice(0, 3).map(([k, v]) => (
-                          <span key={k} style={styles.tagBadge}>
-                            <Tag size={10} style={{ marginRight: 3, opacity: 0.7 }} />
-                            {k}:{String(v)}
-                          </span>
-                        ))}
-                        {Object.keys(session.tags).length > 3 && (
-                          <span style={styles.tagMore}>+{Object.keys(session.tags).length - 3}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={styles.td}>{session.events?.length || 0}</td>
-                    <td style={styles.td}>{formatTokens(sessionTokens)}</td>
-                    <td style={styles.td}>{formatCost(sessionCost)}</td>
-                    <td style={styles.td}>{formatLatency(sessionLatency)}</td>
-                    <td style={{ ...styles.td, textAlign: "right" }}>
-                      <Link to={`/sessions/${session.id}`} className="btn btn-secondary" style={styles.inspectBtn}>
-                        Inspect
-                        <ChevronRight size={14} />
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                    </div>
+                  </div>
+
+                  {/* Events */}
+                  <div style={styles.tableCell}>
+                    <span style={styles.numValue}>{session.events?.length || 0}</span>
+                  </div>
+
+                  {/* Tokens */}
+                  <div style={styles.tableCell}>
+                    <span style={styles.numValue}>{formatTokens(sessionTokens)}</span>
+                  </div>
+
+                  {/* Cost */}
+                  <div style={styles.tableCell}>
+                    <span style={{ ...styles.numValue, color: "var(--color-success)" }}>
+                      {formatCost(sessionCost)}
+                    </span>
+                  </div>
+
+                  {/* Duration */}
+                  <div style={styles.tableCell}>
+                    <span style={styles.numValue}>{formatLatency(sessionLatency)}</span>
+                  </div>
+
+                  {/* Action */}
+                  <div style={{ ...styles.tableCell, textAlign: "right" }}>
+                    <Link
+                      to={`/sessions/${session.id}`}
+                      className="btn btn-secondary"
+                      style={styles.inspectBtn}
+                    >
+                      Inspect
+                      <ChevronRight size={13} />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Footer count */}
+        {!loading && filteredSessions.length > 0 && (
+          <div style={styles.tableFooter}>
+            <span>
+              Showing <b>{filteredSessions.length}</b> of <b>{sessions.length}</b> sessions
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -307,185 +351,266 @@ export function Sessions({ projectId }: SessionsProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: "40px",
+    padding: "36px 40px",
     display: "flex",
     flexDirection: "column",
     flex: 1,
+    gap: 28,
   },
-  header: {
+  pageHeader: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: "32px",
   },
   pageTitle: {
     fontFamily: "var(--font-heading)",
-    fontSize: "28px",
-    fontWeight: 600,
-    marginBottom: "6px",
-    color: "var(--text-primary)",
+    fontSize: 30,
+    fontWeight: 700,
+    letterSpacing: "-0.5px",
+    background: "linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+    marginBottom: 6,
   },
-  pageSubtitle: {
-    fontSize: "14px",
+  pageSub: {
+    fontSize: 14,
     color: "var(--text-secondary)",
+    lineHeight: 1.5,
   },
   refreshBtn: {
-    gap: "6px",
-    padding: "8px 14px",
-    fontSize: "13px",
-  },
-  refreshIcon: {
-    transition: "transform 0.5s ease",
+    gap: 8,
+    padding: "9px 16px",
+    fontSize: 13,
   },
   metricsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "20px",
-    marginBottom: "32px",
+    gap: 18,
   },
   metricCard: {
-    display: "flex",
-    flexDirection: "column",
-    padding: "20px",
+    padding: 0,
+    overflow: "hidden",
+    cursor: "default",
+    position: "relative",
   },
-  metricHeader: {
+  metricAccent: {
+    position: "absolute",
+    top: 0, left: 0, right: 0,
+    height: 2,
+    borderRadius: "14px 14px 0 0",
+  } as React.CSSProperties,
+  metricBody: {
+    display: "flex",
+    gap: 16,
+    alignItems: "center",
+    padding: "20px 22px",
+  },
+  metricIconWrap: {
+    width: 44, height: 44,
+    borderRadius: 10,
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    marginBottom: "12px",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  metricInfo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 3,
   },
   metricLabel: {
-    fontSize: "12px",
-    fontWeight: 500,
-    color: "var(--text-secondary)",
-    fontFamily: "var(--font-heading)",
+    fontSize: 11,
+    fontWeight: 600,
+    color: "var(--text-muted)",
     textTransform: "uppercase",
-    letterSpacing: "0.5px",
+    letterSpacing: "0.6px",
   },
   metricValue: {
     fontFamily: "var(--font-heading)",
-    fontSize: "28px",
+    fontSize: 26,
     fontWeight: 700,
     color: "var(--text-primary)",
-    marginBottom: "4px",
-    lineHeight: 1.1,
+    lineHeight: 1.15,
   },
   metricSub: {
-    fontSize: "11px",
-    color: "var(--text-muted)",
+    fontSize: 11,
+    fontWeight: 500,
   },
   filtersBar: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: "24px",
-    marginBottom: "20px",
+    gap: 16,
   },
   searchWrapper: {
     position: "relative",
     flex: 1,
-    maxWidth: "480px",
+    maxWidth: 440,
     display: "flex",
     alignItems: "center",
   },
   searchIcon: {
     position: "absolute",
-    left: "14px",
+    left: 14,
     color: "var(--text-muted)",
     pointerEvents: "none",
   },
   searchInput: {
-    paddingLeft: "42px",
-    width: "100%",
-    fontSize: "14px",
+    paddingLeft: 42,
+    fontSize: 13,
+    height: 40,
   },
   filterGroup: {
     display: "flex",
-    backgroundColor: "var(--bg-surface)",
+    background: "var(--bg-glass)",
     border: "1px solid var(--border-color)",
-    borderRadius: "8px",
-    padding: "4px",
+    borderRadius: 10,
+    padding: 4,
+    gap: 2,
   },
   filterBtn: {
-    padding: "6px 14px",
-    fontSize: "13px",
-    fontWeight: 500,
-    border: "none",
-    borderRadius: "6px",
+    padding: "6px 16px",
+    fontSize: 12,
+    fontWeight: 600,
+    border: "1px solid transparent",
+    borderRadius: 8,
     cursor: "pointer",
     transition: "all 0.15s",
     outline: "none",
+    fontFamily: "var(--font-sans)",
+    letterSpacing: "0.1px",
   },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    textAlign: "left",
-    fontSize: "14px",
+  tableCard: {
+    padding: 0,
+    overflow: "hidden",
   },
-  tableHeaderRow: {
+  tableHeader: {
+    display: "grid",
+    gridTemplateColumns: "2.5fr 1fr 1.5fr 0.7fr 1fr 0.9fr 1fr 1fr",
+    padding: "12px 24px",
     borderBottom: "1px solid var(--border-color)",
-    backgroundColor: "rgba(18, 18, 20, 0.4)",
+    background: "rgba(0,0,0,0.2)",
   },
-  th: {
-    padding: "16px 24px",
-    fontWeight: 600,
-    color: "var(--text-secondary)",
-    fontSize: "13px",
+  tableHeaderCell: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: "var(--text-muted)",
+    textTransform: "uppercase",
+    letterSpacing: "0.6px",
   },
-  tr: {
+  tableBody: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  tableRow: {
+    display: "grid",
+    gridTemplateColumns: "2.5fr 1fr 1.5fr 0.7fr 1fr 0.9fr 1fr 1fr",
+    padding: "0 24px",
     borderBottom: "1px solid var(--border-color)",
-    transition: "background-color 0.15s",
+    alignItems: "center",
+    transition: "background 0.15s",
+    minHeight: 60,
   },
-  td: {
+  skeletonRow: {
+    display: "grid",
+    gridTemplateColumns: "2.5fr 1fr 1.5fr 0.7fr 1fr 0.9fr 1fr 1fr",
     padding: "16px 24px",
-    verticalAlign: "middle",
-    color: "var(--text-primary)",
+    borderBottom: "1px solid var(--border-color)",
+    alignItems: "center",
+    gap: 8,
+  },
+  tableCell: {
+    display: "flex",
+    alignItems: "center",
+    padding: "0 6px",
   },
   sessionLink: {
     display: "flex",
     flexDirection: "column",
+    gap: 4,
     textDecoration: "none",
-    gap: "4px",
   },
   sessionName: {
+    fontSize: 13,
     fontWeight: 600,
     color: "var(--text-primary)",
   },
   sessionId: {
-    fontSize: "11px",
+    fontSize: 11,
     color: "var(--text-muted)",
+    fontFamily: "var(--font-mono)",
   },
-  statusBadge: {
-    gap: "4px",
+  numValue: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "var(--text-secondary)",
+    fontFamily: "var(--font-mono)",
   },
-  tagsContainer: {
+  tagsRow: {
     display: "flex",
+    gap: 5,
     flexWrap: "wrap",
-    gap: "6px",
   },
-  tagBadge: {
+  tagChip: {
     display: "inline-flex",
     alignItems: "center",
-    backgroundColor: "var(--bg-surface)",
+    gap: 4,
+    background: "var(--bg-glass)",
     border: "1px solid var(--border-color)",
-    color: "var(--text-secondary)",
-    fontSize: "11px",
-    padding: "2px 8px",
-    borderRadius: "4px",
+    color: "var(--text-muted)",
+    fontSize: 10,
+    padding: "2px 7px",
+    borderRadius: 5,
+    fontFamily: "var(--font-mono)",
   },
   tagMore: {
-    fontSize: "10px",
+    fontSize: 10,
     color: "var(--text-muted)",
-    alignSelf: "center",
+    fontWeight: 600,
   },
   inspectBtn: {
     padding: "6px 12px",
-    fontSize: "12px",
-    gap: "4px",
+    fontSize: 12,
+    gap: 4,
+    borderRadius: 7,
   },
-  tableFeedback: {
-    textAlign: "center",
-    padding: "60px 0",
+  emptyState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "72px 40px",
+    gap: 12,
+  },
+  emptyIcon: {
+    width: 56, height: 56,
+    borderRadius: "50%",
+    background: "var(--bg-glass)",
+    border: "1px solid var(--border-color)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: "var(--text-secondary)",
+  },
+  emptyDesc: {
+    fontSize: 13,
     color: "var(--text-muted)",
+    textAlign: "center",
+    maxWidth: 340,
+    lineHeight: 1.6,
+  },
+  tableFooter: {
+    padding: "12px 24px",
+    borderTop: "1px solid var(--border-color)",
+    fontSize: 12,
+    color: "var(--text-muted)",
+    display: "flex",
+    justifyContent: "flex-end",
+    background: "rgba(0,0,0,0.15)",
   },
 };
