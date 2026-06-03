@@ -104,7 +104,7 @@ export function Settings({ activeProjectId, onProjectChange }: SettingsProps) {
               disabled={projectLoading}
               style={styles.formInput}
             />
-            <button className="btn btn-primary" type="submit" disabled={projectLoading} style={styles.addBtn}>
+            <button className="btn btn-primary" type="submit" disabled={projectLoading} style={styles.addBtn} aria-label="Create new project">
               <Plus size={15} /> {projectLoading ? "…" : "Create"}
             </button>
           </form>
@@ -169,7 +169,7 @@ export function Settings({ activeProjectId, onProjectChange }: SettingsProps) {
                   disabled={keyLoading}
                   style={styles.formInput}
                 />
-                <button className="btn btn-primary" type="submit" disabled={keyLoading} style={styles.addBtn}>
+                <button className="btn btn-primary" type="submit" disabled={keyLoading} style={styles.addBtn} aria-label="Generate new API key">
                   <Plus size={15} /> {keyLoading ? "…" : "Generate"}
                 </button>
               </form>
