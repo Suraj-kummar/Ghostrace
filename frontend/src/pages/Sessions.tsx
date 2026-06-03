@@ -33,6 +33,17 @@ export function Sessions({ projectId }: SessionsProps) {
     fetchSessions();
   }, [projectId]);
 
+  // Show friendly prompt when no project has been selected yet
+  if (!projectId) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: 12, padding: 60 }}>
+        <p style={{ fontSize: 15, color: "var(--text-muted)", textAlign: "center" }}>
+          Select or create a project in <b style={{ color: "var(--text-secondary)" }}>Settings</b> to start viewing sessions.
+        </p>
+      </div>
+    );
+  }
+
   let totalCost = 0, totalTokens = 0, totalLatency = 0,
     latencyCount = 0, errorCount = 0;
 
