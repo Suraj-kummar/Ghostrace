@@ -261,7 +261,7 @@ export function Sessions({ projectId }: SessionsProps) {
                   <div style={styles.tableCell}>
                     <Link to={`/sessions/${session.id}`} style={styles.sessionLink}>
                       <span style={styles.sessionName}>{session.name || "Unnamed Session"}</span>
-                      <code style={styles.sessionId}>{session.id.substring(0, 18)}…</code>
+                      <code style={styles.sessionId} title={session.id}>{session.id.substring(0, 18)}…</code>
                     </Link>
                   </div>
 
