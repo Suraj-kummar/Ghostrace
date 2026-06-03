@@ -142,6 +142,7 @@ export function Auth({ onLoginSuccess }: AuthProps) {
                     className="input-field"
                     type="email"
                     id="email"
+                    autoComplete="email"
                     placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -161,6 +162,7 @@ export function Auth({ onLoginSuccess }: AuthProps) {
                     className="input-field"
                     type={showPassword ? "text" : "password"}
                     id="password"
+                    autoComplete={isLogin ? "current-password" : "new-password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
