@@ -150,7 +150,7 @@ function AppContent() {
               <span style={styles.userPlan}>Free plan</span>
             </div>
           </div>
-          <button className="btn btn-secondary" onClick={handleLogout} style={styles.logoutBtn}>
+          <button className="btn btn-secondary" onClick={handleLogout} style={styles.logoutBtn} aria-label="Sign out of your account">
             <LogOut size={14} />
             Sign out
           </button>
