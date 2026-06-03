@@ -128,6 +128,10 @@ export function Settings({ activeProjectId, onProjectChange }: SettingsProps) {
                       boxShadow: isActive ? "0 0 0 1px rgba(99,102,241,0.15) inset" : "none",
                     }}
                     onClick={() => onProjectChange(proj.id)}
+                    role="button"
+                    tabIndex={0}
+                    title={`Project ID: ${proj.id}`}
+                    onKeyDown={(e) => e.key === "Enter" && onProjectChange(proj.id)}
                   >
                     <div style={styles.projectInfoWrap}>
                       <div style={{ ...styles.projectDot, background: isActive ? "var(--color-success)" : "var(--text-muted)" }} />
