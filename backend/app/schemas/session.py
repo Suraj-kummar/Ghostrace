@@ -37,5 +37,7 @@ class SessionResponse(SessionBase):
     events: List[TraceEventResponse] = Field(default_factory=list)
     loop_detected: bool = False
     loop_info: List[LoopInfo] = Field(default_factory=list)
+    duration_ms: Optional[float] = None  # computed from first/last event timestamps
 
     model_config = {"from_attributes": True}
+
