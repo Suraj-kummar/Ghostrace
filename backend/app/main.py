@@ -9,6 +9,7 @@ from .config import get_settings
 from .database import create_all_tables
 from .api import auth, projects, sessions, analytics
 from .api import health as health_api
+from .api import traces as traces_api
 from .api.v1 import ingest
 from .middleware import TimingMiddleware, RequestIDMiddleware
 
@@ -51,6 +52,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
 app.include_router(analytics.router, prefix="/api/projects", tags=["Analytics"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
+app.include_router(traces_api.router)
 
 
 @app.get("/")
