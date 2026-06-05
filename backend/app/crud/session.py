@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 
@@ -110,3 +110,47 @@ async def ingest_session(db: AsyncSession, project_id: str, payload: SessionInge
     # Re-fetch session to load events relationship properly
     db_session = await get_session(db, session_id)
     return db_session  # type: ignore[return-value]
+
+
+async def delete_session(db: AsyncSession, session: "Session") -> None:
+    """Permanently delete a session and its events (cascade)."""
+    await db.delete(session)
+    await db.flush()
+
+
+async def search_sessions(
+    db: AsyncSession,
+    project_id: str,
+    name_query: Optional[str] = None,
+    tag_key: Optional[str] = None,
+    tag_value: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+) -> List["Session"]:
+    """Search sessions by name substring and/or tag key/value."""
+    from ..models.session import Session as SessionModel  # local import to avoid circular
+
+    q = (
+        select(SessionModel)
+        .where(SessionModel.project_id == project_id)
+        .options(selectinload(SessionModel.events))
+        .order_by(SessionModel.started_at.desc())
+    )
+
+    if name_query:
+        q = q.where(SessionModel.name.ilike(f"%{name_query}%"))
+
+    # JSON tag filtering — works for SQLite and PostgreSQL JSON columns
+    if tag_key and tag_value:
+        # SQLite JSON path operator
+        q = q.where(
+            func.json_extract(SessionModel.tags, f"$.{tag_key}") == tag_value
+        )
+    elif tag_key:
+        q = q.where(
+            func.json_extract(SessionModel.tags, f"$.{tag_key}") != None  # noqa: E711
+        )
+
+    q = q.offset(skip).limit(limit)
+    result = await db.execute(q)
+    return list(result.scalars().all())
