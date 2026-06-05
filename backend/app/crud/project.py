@@ -32,3 +32,8 @@ async def create_project(db: AsyncSession, user_id: str, obj_in: ProjectCreate) 
     db.add(db_project)
     await db.flush()
     return db_project
+
+
+async def delete_project(db: AsyncSession, project: Project) -> None:
+    await db.delete(project)
+    await db.flush()

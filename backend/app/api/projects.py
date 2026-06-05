@@ -9,8 +9,8 @@ from ..api.deps import get_current_user
 from ..models.user import User
 from ..schemas.project import ProjectCreate, ProjectResponse
 from ..schemas.api_key import ApiKeyCreate, ApiKeyResponse
-from ..crud.project import get_project, get_project_by_name, get_user_projects, create_project
-from ..crud.api_key import get_project_keys, create_api_key
+from ..crud.project import get_project, get_project_by_name, get_user_projects, create_project, delete_project
+from ..crud.api_key import get_project_keys, create_api_key, get_api_key_by_id, delete_api_key
 
 router = APIRouter()
 
@@ -101,3 +101,40 @@ async def list_project_api_keys(
         )
 
     return await get_project_keys(db, project_id=project_id)
+
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_existing_project(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await get_project(db, project_id=project_id)
+    if not project or project.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+    await delete_project(db, project)
+
+
+@router.delete("/{project_id}/keys/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_existing_api_key(
+    project_id: str,
+    key_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await get_project(db, project_id=project_id)
+    if not project or project.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+    api_key = await get_api_key_by_id(db, key_id=key_id)
+    if not api_key or api_key.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="API key not found",
+        )
+    await delete_api_key(db, api_key)

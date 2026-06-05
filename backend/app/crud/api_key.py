@@ -38,3 +38,13 @@ async def create_api_key(db: AsyncSession, project_id: str, obj_in: ApiKeyCreate
     db.add(db_key)
     await db.flush()
     return db_key
+
+
+async def get_api_key_by_id(db: AsyncSession, key_id: str) -> Optional[ApiKey]:
+    result = await db.execute(select(ApiKey).where(ApiKey.id == key_id))
+    return result.scalars().first()
+
+
+async def delete_api_key(db: AsyncSession, api_key: ApiKey) -> None:
+    await db.delete(api_key)
+    await db.flush()
