@@ -112,4 +112,29 @@ export const api = {
   async getAnalytics(projectId: string) {
     return request(`/api/projects/${projectId}/analytics`);
   },
+
+  // Delete
+  async deleteProject(projectId: string) {
+    const token = localStorage.getItem("gr_token");
+    const res = await fetch(`/api/projects/${projectId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to delete project");
+    }
+  },
+
+  async deleteApiKey(projectId: string, keyId: string) {
+    const token = localStorage.getItem("gr_token");
+    const res = await fetch(`/api/projects/${projectId}/keys/${keyId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to delete API key");
+    }
+  },
 };
