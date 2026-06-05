@@ -6,7 +6,7 @@ import structlog
 
 from .config import get_settings
 from .database import create_all_tables
-from .api import auth, projects, sessions
+from .api import auth, projects, sessions, analytics
 from .api.v1 import ingest
 
 logger = structlog.get_logger()
@@ -42,6 +42,7 @@ app.add_middleware(
 app.include_router(ingest.router, prefix="/v1", tags=["SDK Ingestion"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
+app.include_router(analytics.router, prefix="/api/projects", tags=["Analytics"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
 
 

@@ -5,9 +5,10 @@ import { Auth } from "./pages/Auth";
 import { Sessions } from "./pages/Sessions";
 import { SessionDetail } from "./pages/SessionDetail";
 import { Settings } from "./pages/Settings";
+import { Analytics } from "./pages/Analytics";
 import {
   Activity, Sliders, LogOut, LayoutDashboard,
-  Sparkles, User, ChevronDown, Zap
+  Sparkles, User, ChevronDown, BarChart2
 } from "lucide-react";
 import "./App.css";
 
@@ -91,6 +92,7 @@ function AppContent() {
 
   const navItems = [
     { to: "/", icon: <LayoutDashboard size={16} />, label: "Sessions", match: (p: string) => p === "/" || p.startsWith("/sessions/") },
+    { to: "/analytics", icon: <BarChart2 size={16} />, label: "Analytics", match: (p: string) => p === "/analytics" },
     { to: "/settings", icon: <Sliders size={16} />, label: "Settings", match: (p: string) => p === "/settings" },
   ];
 
@@ -198,6 +200,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Sessions projectId={activeProjectId} />} />
             <Route path="/sessions/:sessionId" element={<SessionDetail />} />
+            <Route path="/analytics" element={<Analytics projectId={activeProjectId} />} />
             <Route
               path="/settings"
               element={

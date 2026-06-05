@@ -107,4 +107,9 @@ export const api = {
   async getSessionDetail(sessionId: string) {
     return request(`/api/sessions/${sessionId}`);
   },
+
+  // Analytics
+  async getAnalytics(projectId: string) {
+    return request(`/api/projects/${projectId}/analytics`);
+  },
 };
