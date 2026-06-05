@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../services/api";
 import {
   Search, Database, DollarSign, Clock, AlertCircle,
-  ChevronRight, RefreshCw, BarChart2, Tag, TrendingUp, Zap
+  ChevronRight, RefreshCw, BarChart2, Tag, TrendingUp, Zap, RotateCcw
 } from "lucide-react";
 
 interface SessionsProps {
@@ -214,7 +214,7 @@ export function Sessions({ projectId }: SessionsProps) {
         {/* Table header */}
         <div style={styles.tableHeader}>
           <span style={styles.tableHeaderCell}>Session</span>
-          <span style={styles.tableHeaderCell}>Status</span>
+          <span style={styles.tableHeaderCell}>Status / Loops</span>
           <span style={styles.tableHeaderCell}>Tags</span>
           <span style={styles.tableHeaderCell}>Events</span>
           <span style={styles.tableHeaderCell}>Tokens</span>
@@ -276,8 +276,8 @@ export function Sessions({ projectId }: SessionsProps) {
                     </Link>
                   </div>
 
-                  {/* Status */}
-                  <div style={styles.tableCell}>
+                  {/* Status + Loop badge */}
+                  <div style={{ ...styles.tableCell, flexDirection: "column", alignItems: "flex-start", gap: 5 }}>
                     {sessionHasError ? (
                       <span className="badge badge-error" style={{ gap: 5 }}>
                         <AlertCircle size={11} />
@@ -287,6 +287,12 @@ export function Sessions({ projectId }: SessionsProps) {
                       <span className="badge badge-success" style={{ gap: 5 }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-success)", display: "inline-block" }} />
                         Success
+                      </span>
+                    )}
+                    {session.loop_detected && (
+                      <span className="badge badge-warning" style={{ gap: 4, fontSize: 10 }}>
+                        <RotateCcw size={9} />
+                        Loop
                       </span>
                     )}
                   </div>

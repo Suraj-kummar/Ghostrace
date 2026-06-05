@@ -134,7 +134,7 @@ class HttpSender:
                     headers={
                         "Authorization": f"Bearer {config.api_key}",
                         "Content-Type": "application/json",
-                        "X-Ghostrace-SDK": "python/0.1.0",
+                        "X-Ghostrace-SDK": "python/0.2.0",
                     },
                     timeout=10.0,
                 )

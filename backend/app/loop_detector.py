@@ -24,6 +24,9 @@ from typing import Any, Dict, List, Optional
 # Minimum identical occurrences required to flag a loop
 LOOP_REPEAT_THRESHOLD = 3
 
+# Public alias — callers can read this to know current sensitivity level
+DEFAULT_THRESHOLD = LOOP_REPEAT_THRESHOLD
+
 
 # ── Data structures ───────────────────────────────────────────────────────────
 

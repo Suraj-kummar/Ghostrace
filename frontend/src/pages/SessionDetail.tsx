@@ -4,15 +4,29 @@ import { api } from "../services/api";
 import {
   ArrowLeft, MessageSquare, Wrench, AlertTriangle,
   Settings, Clock, Coins, DollarSign, Tag, Cpu,
-  ChevronRight, Copy, Check, Zap
+  ChevronRight, Copy, Check, Zap, RefreshCw,
+  ShieldAlert, ShieldCheck, RotateCcw, ChevronDown, ChevronUp,
+  Repeat2
 } from "lucide-react";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface LoopOccurrence {
+  kind: "llm_prompt" | "tool_call" | "consecutive_model";
+  description: string;
+  event_ids: string[];
+  repeat_count: number;
+  severity: "warning" | "critical";
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export function SessionDetail() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [highlightedEventIds, setHighlightedEventIds] = useState<Set<string>>(new Set());
+  const [expandedOccurrence, setExpandedOccurrence] = useState<number | null>(null);
 
   const fetchSessionDetail = async () => {
     if (!sessionId) return;
@@ -36,6 +50,18 @@ export function SessionDetail() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleOccurrenceHover = (occ: LoopOccurrence | null) => {
+    setHighlightedEventIds(occ ? new Set(occ.event_ids) : new Set());
+  };
+
+  const handleOccurrenceClick = (occ: LoopOccurrence, idx: number) => {
+    setExpandedOccurrence(expandedOccurrence === idx ? null : idx);
+    setHighlightedEventIds(new Set(occ.event_ids));
+    // Jump to first affected event in timeline
+    if (occ.event_ids[0]) setSelectedEventId(occ.event_ids[0]);
+  };
+
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div style={styles.loadingState}>
@@ -67,6 +93,7 @@ export function SessionDetail() {
     );
   }
 
+  // ── Derived stats ────────────────────────────────────────────────────────
   let totalCost = 0, totalTokens = 0, totalLatency = 0, hasError = false;
   session.events?.forEach((e: any) => {
     if (e.event_type === "error" || e.error_type) hasError = true;
@@ -77,6 +104,9 @@ export function SessionDetail() {
   });
 
   const selectedEvent = session.events?.find((e: any) => e.id === selectedEventId);
+  const loopOccurrences: LoopOccurrence[] = session.loop_info ?? [];
+  const loopDetected: boolean = session.loop_detected ?? false;
+  const hasCritical = loopOccurrences.some(o => o.severity === "critical");
 
   const fmt = {
     cost: (n: number) => n === 0 ? "$0.00" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`,
@@ -101,14 +131,47 @@ export function SessionDetail() {
     }
   };
 
+  const getLoopKindLabel = (kind: string) => {
+    switch (kind) {
+      case "llm_prompt":         return "Repeated Prompt";
+      case "tool_call":          return "Repeated Tool Call";
+      case "consecutive_model":  return "Consecutive Model Calls";
+      default:                   return "Loop Pattern";
+    }
+  };
+
+  const getLoopKindIcon = (kind: string) => {
+    switch (kind) {
+      case "llm_prompt":         return <MessageSquare size={14} />;
+      case "tool_call":          return <Wrench size={14} />;
+      case "consecutive_model":  return <Repeat2 size={14} />;
+      default:                   return <RotateCcw size={14} />;
+    }
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div style={styles.container} className="animated-fade-in">
+
       {/* ── Top nav ── */}
       <div style={styles.topNav}>
         <Link to="/" style={styles.backBtn}>
           <ArrowLeft size={14} />
           Sessions
         </Link>
+        <div style={styles.topNavCenter}>
+          {loopDetected && (
+            <div style={{
+              ...styles.loopAlertPill,
+              background: hasCritical ? "rgba(244,63,94,0.08)" : "rgba(245,158,11,0.08)",
+              border: `1px solid ${hasCritical ? "rgba(244,63,94,0.3)" : "rgba(245,158,11,0.3)"}`,
+              color: hasCritical ? "var(--color-error)" : "var(--color-warning)",
+            }}>
+              <ShieldAlert size={13} />
+              {hasCritical ? "Critical loop detected" : "Loop pattern detected"} — {loopOccurrences.length} issue{loopOccurrences.length !== 1 ? "s" : ""}
+            </div>
+          )}
+        </div>
         <div style={styles.sessionIdBadge}>
           <code style={styles.sessionIdText}>{session.id}</code>
           <button style={styles.copyIdBtn} onClick={copyId} title="Copy ID">
@@ -118,6 +181,131 @@ export function SessionDetail() {
           </button>
         </div>
       </div>
+
+      {/* ── Loop Analysis Banner (when loops exist) ── */}
+      {loopDetected && (
+        <div style={{
+          ...styles.loopBanner,
+          borderColor: hasCritical ? "rgba(244,63,94,0.2)" : "rgba(245,158,11,0.2)",
+        }} className="animated-fade-in">
+          <div style={styles.loopBannerHeader}>
+            <div style={styles.loopBannerTitle}>
+              <div style={{
+                ...styles.loopBannerIcon,
+                background: hasCritical ? "rgba(244,63,94,0.12)" : "rgba(245,158,11,0.12)",
+                color: hasCritical ? "var(--color-error)" : "var(--color-warning)",
+              }}>
+                <ShieldAlert size={18} />
+              </div>
+              <div>
+                <h3 style={styles.loopBannerHeading}>Loop Analysis</h3>
+                <p style={styles.loopBannerSub}>
+                  {loopOccurrences.length} repetitive pattern{loopOccurrences.length !== 1 ? "s" : ""} detected across {new Set(loopOccurrences.flatMap(o => o.event_ids)).size} events
+                </p>
+              </div>
+            </div>
+            <div style={styles.loopBannerBadges}>
+              {hasCritical && (
+                <span className="badge badge-error" style={{ gap: 5 }}>
+                  <AlertTriangle size={10} /> Critical
+                </span>
+              )}
+              {loopOccurrences.some(o => o.severity === "warning") && (
+                <span className="badge badge-warning" style={{ gap: 5 }}>
+                  <AlertTriangle size={10} /> Warning
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Occurrence cards */}
+          <div style={styles.loopOccurrenceList}>
+            {loopOccurrences.map((occ, idx) => {
+              const isExpanded = expandedOccurrence === idx;
+              const isCrit = occ.severity === "critical";
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    ...styles.loopOccurrenceCard,
+                    borderColor: isCrit ? "rgba(244,63,94,0.25)" : "rgba(245,158,11,0.2)",
+                    background: isCrit ? "rgba(244,63,94,0.04)" : "rgba(245,158,11,0.04)",
+                  }}
+                  onMouseEnter={() => handleOccurrenceHover(occ)}
+                  onMouseLeave={() => handleOccurrenceHover(null)}
+                >
+                  <button
+                    style={styles.loopOccurrenceBtn}
+                    onClick={() => handleOccurrenceClick(occ, idx)}
+                  >
+                    <div style={styles.loopOccurrenceLeft}>
+                      <span style={{
+                        ...styles.loopKindIcon,
+                        background: isCrit ? "rgba(244,63,94,0.12)" : "rgba(245,158,11,0.12)",
+                        color: isCrit ? "var(--color-error)" : "var(--color-warning)",
+                      }}>
+                        {getLoopKindIcon(occ.kind)}
+                      </span>
+                      <div>
+                        <span style={styles.loopOccurrenceLabel}>{getLoopKindLabel(occ.kind)}</span>
+                        <span style={styles.loopOccurrenceDesc}>{occ.description}</span>
+                      </div>
+                    </div>
+                    <div style={styles.loopOccurrenceRight}>
+                      <span style={{
+                        ...styles.loopRepeatBadge,
+                        background: isCrit ? "rgba(244,63,94,0.12)" : "rgba(245,158,11,0.12)",
+                        color: isCrit ? "var(--color-error)" : "var(--color-warning)",
+                        border: `1px solid ${isCrit ? "rgba(244,63,94,0.2)" : "rgba(245,158,11,0.2)"}`,
+                      }}>
+                        ×{occ.repeat_count}
+                      </span>
+                      {isExpanded ? <ChevronUp size={14} style={{ color: "var(--text-muted)" }} /> : <ChevronDown size={14} style={{ color: "var(--text-muted)" }} />}
+                    </div>
+                  </button>
+
+                  {/* Expanded: show affected event IDs */}
+                  {isExpanded && (
+                    <div style={styles.loopOccurrenceExpanded} className="animated-fade-in">
+                      <span style={styles.loopExpandedLabel}>Affected event IDs</span>
+                      <div style={styles.loopEventIdList}>
+                        {occ.event_ids.map(eid => (
+                          <button
+                            key={eid}
+                            style={{
+                              ...styles.loopEventIdChip,
+                              borderColor: selectedEventId === eid
+                                ? (isCrit ? "rgba(244,63,94,0.5)" : "rgba(245,158,11,0.5)")
+                                : "var(--border-color)",
+                              background: selectedEventId === eid
+                                ? (isCrit ? "rgba(244,63,94,0.1)" : "rgba(245,158,11,0.1)")
+                                : "var(--bg-glass)",
+                            }}
+                            onClick={() => setSelectedEventId(eid)}
+                            title={eid}
+                          >
+                            {eid.substring(0, 14)}…
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── No loops found banner ── */}
+      {!loopDetected && session.events?.length >= 3 && (
+        <div style={styles.noLoopBanner} className="animated-fade-in">
+          <ShieldCheck size={15} style={{ color: "var(--color-success)", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
+            No loop patterns detected — agent execution looks healthy.
+          </span>
+        </div>
+      )}
 
       {/* ── Three-column layout ── */}
       <div style={styles.splitLayout}>
@@ -164,6 +352,27 @@ export function SessionDetail() {
 
             <div className="glow-divider" />
 
+            {/* Loop summary mini-row */}
+            <div style={styles.statRow}>
+              <span style={styles.statLabel}>Loop Analysis</span>
+              {loopDetected ? (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  fontSize: 11, fontWeight: 700,
+                  color: hasCritical ? "var(--color-error)" : "var(--color-warning)",
+                }}>
+                  <ShieldAlert size={12} />
+                  {loopOccurrences.length} issue{loopOccurrences.length !== 1 ? "s" : ""}
+                </span>
+              ) : (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: "var(--color-success)" }}>
+                  <ShieldCheck size={12} /> Clean
+                </span>
+              )}
+            </div>
+
+            <div className="glow-divider" />
+
             {/* Tags */}
             <p style={styles.sectionLabel}>Tags</p>
             <div style={styles.tagsWrap}>
@@ -202,6 +411,13 @@ export function SessionDetail() {
                 const evStyle = getEventStyle(ev.event_type);
                 const isSelected = ev.id === selectedEventId;
                 const isError = ev.event_type === "error" || ev.error_type;
+                const isHighlighted = highlightedEventIds.has(ev.id);
+
+                // Find if this event is in any loop occurrence
+                const loopOcc = loopOccurrences.find(o => o.event_ids.includes(ev.id));
+                const loopColor = loopOcc?.severity === "critical"
+                  ? "var(--color-error)"
+                  : loopOcc ? "var(--color-warning)" : null;
 
                 return (
                   <div
@@ -212,11 +428,18 @@ export function SessionDetail() {
                     {/* Dot marker */}
                     <div style={{
                       ...styles.timelineDot,
-                      background: isSelected ? evStyle.color : "var(--bg-surface)",
-                      border: `2px solid ${isSelected ? evStyle.color : isError ? "var(--color-error)" : "var(--border-color-hover)"}`,
-                      boxShadow: isSelected ? `0 0 12px ${evStyle.color}66` : "none",
+                      background: isSelected ? evStyle.color : (isHighlighted ? (loopColor || evStyle.color) : "var(--bg-surface)"),
+                      border: `2px solid ${
+                        isSelected ? evStyle.color
+                        : isHighlighted ? (loopColor || evStyle.color)
+                        : isError ? "var(--color-error)"
+                        : "var(--border-color-hover)"
+                      }`,
+                      boxShadow: isSelected
+                        ? `0 0 12px ${evStyle.color}66`
+                        : isHighlighted ? `0 0 10px ${loopColor || evStyle.color}55` : "none",
                     }}>
-                      <span style={{ color: isSelected ? "white" : evStyle.color }}>
+                      <span style={{ color: isSelected || isHighlighted ? "white" : evStyle.color }}>
                         {getEventIcon(ev.event_type)}
                       </span>
                     </div>
@@ -226,9 +449,13 @@ export function SessionDetail() {
                       className="card"
                       style={{
                         ...styles.eventCard,
-                        borderColor: isSelected ? `${evStyle.color}55` : "var(--border-color)",
+                        borderColor: isSelected
+                          ? `${evStyle.color}55`
+                          : isHighlighted ? `${loopColor}55` ?? "var(--border-color)"
+                          : "var(--border-color)",
                         background: isSelected
                           ? `${evStyle.bg}`
+                          : isHighlighted ? `${loopColor === "var(--color-error)" ? "rgba(244,63,94,0.05)" : "rgba(245,158,11,0.05)"}`
                           : "var(--bg-card)",
                         cursor: "pointer",
                         transform: isSelected ? "translateX(2px)" : "none",
@@ -245,6 +472,18 @@ export function SessionDetail() {
                           }}>
                             {evStyle.label}
                           </span>
+                          {/* Loop indicator pill */}
+                          {loopOcc && (
+                            <span style={{
+                              ...styles.eventTypePill,
+                              background: loopOcc.severity === "critical" ? "rgba(244,63,94,0.12)" : "rgba(245,158,11,0.12)",
+                              color: loopOcc.severity === "critical" ? "var(--color-error)" : "var(--color-warning)",
+                              display: "inline-flex", alignItems: "center", gap: 3,
+                            }}>
+                              <RotateCcw size={9} />
+                              Loop
+                            </span>
+                          )}
                         </div>
                         <div style={styles.eventMetrics}>
                           {ev.latency_ms && (
@@ -292,6 +531,29 @@ export function SessionDetail() {
 
             {selectedEvent ? (
               <div style={styles.inspectorBody} className="animated-fade-in" key={selectedEvent.id}>
+                {/* Loop warning for this event */}
+                {(() => {
+                  const occ = loopOccurrences.find(o => o.event_ids.includes(selectedEvent.id));
+                  if (!occ) return null;
+                  const isCrit = occ.severity === "critical";
+                  return (
+                    <div style={{
+                      display: "flex", alignItems: "flex-start", gap: 10,
+                      background: isCrit ? "rgba(244,63,94,0.06)" : "rgba(245,158,11,0.06)",
+                      border: `1px solid ${isCrit ? "rgba(244,63,94,0.2)" : "rgba(245,158,11,0.2)"}`,
+                      borderRadius: 10, padding: "10px 14px",
+                    }}>
+                      <ShieldAlert size={14} style={{ color: isCrit ? "var(--color-error)" : "var(--color-warning)", flexShrink: 0, marginTop: 1 }} />
+                      <div>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: isCrit ? "var(--color-error)" : "var(--color-warning)", marginBottom: 2 }}>
+                          {occ.severity === "critical" ? "Critical" : "Warning"} — {getLoopKindLabel(occ.kind)}
+                        </p>
+                        <p style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5 }}>{occ.description}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Meta banner */}
                 <div style={styles.metaBanner}>
                   {[
@@ -399,7 +661,7 @@ export function SessionDetail() {
   );
 }
 
-/* Reusable code block sub-component */
+// ─── CodeBlock sub-component ────────────────────────────────────────────────
 function CodeBlock({ title, content, isError = false }: { title: string; content: string; isError?: boolean }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -450,9 +712,13 @@ const cbStyles: Record<string, React.CSSProperties> = {
   },
 };
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
-  container: { padding: "28px 32px", display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", gap: 20 },
+  container: { padding: "28px 32px", display: "flex", flexDirection: "column", minHeight: "100vh", gap: 20 },
+
   topNav: { display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
+  topNavCenter: { display: "flex", alignItems: "center", gap: 10, flex: 1, justifyContent: "center" },
+
   backBtn: {
     display: "flex", alignItems: "center", gap: 7,
     color: "var(--text-secondary)", textDecoration: "none",
@@ -460,11 +726,19 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--bg-glass)", border: "1px solid var(--border-color)",
     borderRadius: 8, padding: "7px 14px",
     transition: "all 0.2s",
+    flexShrink: 0,
+  },
+  loopAlertPill: {
+    display: "inline-flex", alignItems: "center", gap: 7,
+    fontSize: 12, fontWeight: 700,
+    padding: "6px 14px", borderRadius: 99,
+    animation: "pulse-border 2s ease-in-out infinite",
   },
   sessionIdBadge: {
     display: "flex", alignItems: "center", gap: 8,
     background: "var(--bg-glass)", border: "1px solid var(--border-color)",
     borderRadius: 8, padding: "6px 12px",
+    flexShrink: 0,
   },
   sessionIdText: { fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" },
   copyIdBtn: {
@@ -473,7 +747,77 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 2, borderRadius: 4,
   },
 
-  splitLayout: { display: "grid", gridTemplateColumns: "280px 1fr 420px", gap: 20, flex: 1, overflow: "hidden" },
+  // ── Loop banner ────────────────────────────────────────────────────────
+  loopBanner: {
+    background: "rgba(0,0,0,0.2)",
+    border: "1px solid",
+    borderRadius: "var(--radius-lg)",
+    padding: "20px 24px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 16,
+    backdropFilter: "blur(12px)",
+  },
+  loopBannerHeader: { display: "flex", alignItems: "center", justifyContent: "space-between" },
+  loopBannerTitle: { display: "flex", alignItems: "center", gap: 14 },
+  loopBannerIcon: {
+    width: 44, height: 44, borderRadius: 12,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  loopBannerHeading: { fontFamily: "var(--font-heading)", fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 3 },
+  loopBannerSub: { fontSize: 12, color: "var(--text-secondary)" },
+  loopBannerBadges: { display: "flex", gap: 8 },
+
+  loopOccurrenceList: { display: "flex", flexDirection: "column", gap: 8 },
+  loopOccurrenceCard: {
+    border: "1px solid",
+    borderRadius: "var(--radius-md)",
+    overflow: "hidden",
+    transition: "all 0.18s",
+  },
+  loopOccurrenceBtn: {
+    width: "100%", display: "flex", alignItems: "center",
+    justifyContent: "space-between", padding: "12px 16px",
+    background: "none", border: "none", cursor: "pointer",
+    gap: 12,
+  },
+  loopOccurrenceLeft: { display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 },
+  loopKindIcon: {
+    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+    display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  loopOccurrenceLabel: { display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textAlign: "left" as const },
+  loopOccurrenceDesc: { display: "block", fontSize: 11, color: "var(--text-secondary)", textAlign: "left" as const, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
+  loopOccurrenceRight: { display: "flex", alignItems: "center", gap: 10, flexShrink: 0 },
+  loopRepeatBadge: {
+    fontSize: 12, fontWeight: 800, fontFamily: "var(--font-mono)",
+    padding: "2px 10px", borderRadius: 99,
+  },
+  loopOccurrenceExpanded: {
+    padding: "12px 16px 14px",
+    borderTop: "1px solid var(--border-color)",
+    display: "flex", flexDirection: "column", gap: 10,
+    background: "rgba(0,0,0,0.15)",
+  },
+  loopExpandedLabel: { fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" as const, letterSpacing: "0.6px" },
+  loopEventIdList: { display: "flex", flexWrap: "wrap" as const, gap: 6 },
+  loopEventIdChip: {
+    fontFamily: "var(--font-mono)", fontSize: 11,
+    background: "var(--bg-glass)", border: "1px solid",
+    borderRadius: 6, padding: "3px 9px", cursor: "pointer",
+    color: "var(--text-secondary)", fontWeight: 500,
+    transition: "all 0.15s",
+  },
+
+  noLoopBanner: {
+    display: "flex", alignItems: "center", gap: 10,
+    background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.15)",
+    borderRadius: "var(--radius-md)", padding: "10px 18px",
+  },
+
+  // ── Three-column layout ────────────────────────────────────────────────
+  splitLayout: { display: "grid", gridTemplateColumns: "280px 1fr 420px", gap: 20, flex: 1 },
 
   leftCol: { display: "flex", flexDirection: "column", overflowY: "auto" },
   centerCol: { display: "flex", flexDirection: "column", overflowY: "auto" },
@@ -506,8 +850,7 @@ const styles: Record<string, React.CSSProperties> = {
   timelineLine: {
     position: "absolute", left: 11, top: 8, bottom: 8, width: 2,
     background: "linear-gradient(180deg, var(--color-primary) 0%, rgba(99,102,241,0.2) 80%, transparent 100%)",
-    borderRadius: 2,
-    zIndex: 1,
+    borderRadius: 2, zIndex: 1,
   },
   timelineNode: { position: "relative", display: "flex", gap: 14, alignItems: "flex-start" },
   timelineDot: {
