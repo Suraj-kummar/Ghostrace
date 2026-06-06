@@ -441,16 +441,7 @@ export function Settings({ activeProjectId, onProjectChange }: SettingsProps) {
                         </div>
                         <div style={styles.keyRight}>
                           <code style={styles.keyRedacted}>{key.key.substring(0, 8)}••••••••</code>
-                          <button
-                            className="btn btn-secondary"
-                            style={styles.copyBtn}
-                            onClick={() => copyToClipboard(key.key, key.id)}
-                            title="Copy key"
-                          >
-                            {copiedKeyId === key.id
-                              ? <Check size={13} style={{ color: "var(--color-success)" }} />
-                              : <Copy size={13} />}
-                          </button>
+                          <CopyButton text={key.key} label="Copy" successLabel="Copied" />
                           <button
                             style={styles.deleteBtn}
                             onClick={() => openDeleteKey(key)}
