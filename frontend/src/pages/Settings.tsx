@@ -509,6 +509,38 @@ export function Settings({ activeProjectId, onProjectChange }: SettingsProps) {
             ))}
           </div>
         </div>
+
+        {/* ── Danger Zone ── */}
+        <div className="card" style={styles.dangerZoneCard}>
+          <div style={styles.dangerZoneHeader}>
+            <div style={{ ...styles.panelIcon, background: "rgba(244,63,94,0.12)" }}>
+              <AlertTriangle size={16} style={{ color: "var(--color-error)" }} />
+            </div>
+            <div>
+              <h2 style={styles.panelTitle}>Danger Zone</h2>
+              <p style={styles.panelDesc}>Actions here are permanent and cannot be undone.</p>
+            </div>
+          </div>
+          <div style={styles.dangerZoneBody}>
+            <div style={styles.dangerZoneAction}>
+              <div>
+                <span style={styles.dangerZoneLabel}>Delete Account</span>
+                <p style={styles.dangerZoneDesc}>
+                  Permanently delete your account, projects, keys, and all session trace telemetry data.
+                </p>
+              </div>
+              <button
+                className="btn btn-secondary"
+                style={styles.deleteAccountBtn}
+                onClick={() => {
+                  alert("Please contact support at support@ghostrace.dev to delete your account.");
+                }}
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
