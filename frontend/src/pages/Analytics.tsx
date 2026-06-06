@@ -406,18 +406,39 @@ export function Analytics({ projectId }: AnalyticsProps) {
         <div>
           <h1 style={styles.pageTitle}>Analytics</h1>
           <p style={styles.pageSub}>
-            30-day performance metrics, cost trends, and model usage breakdown.
+            {period}-day performance metrics, cost trends, and model usage breakdown.
           </p>
         </div>
-        <button
-          className="btn btn-secondary"
-          onClick={fetch}
-          disabled={loading}
-          style={{ gap: 8, padding: "9px 16px", fontSize: 13 }}
-        >
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          Refresh
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Period Selector */}
+          <div style={styles.periodGroup}>
+            {[7, 30, 90].map((d) => (
+              <button
+                key={d}
+                style={{
+                  ...styles.periodBtn,
+                  background: period === d ? "var(--color-primary-glow)" : "transparent",
+                  color: period === d ? "var(--color-primary-light)" : "var(--text-secondary)",
+                  borderColor: period === d ? "rgba(99, 102, 241, 0.4)" : "var(--border-color)",
+                }}
+                onClick={() => setPeriod(d)}
+                disabled={loading}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+
+          <button
+            className="btn btn-secondary"
+            onClick={fetch}
+            disabled={loading}
+            style={{ gap: 8, padding: "9px 16px", fontSize: 13 }}
+          >
+            <RefreshCw size={14} className={loading ? "spin" : ""} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* ── Stat cards ── */}
