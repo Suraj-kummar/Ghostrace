@@ -87,6 +87,8 @@ export function Settings({ activeProjectId, onProjectChange }: SettingsProps) {
   const [keyLoading, setKeyLoading]   = useState(false);
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(false);
 
   // Delete modal state
   const [deleteModal, setDeleteModal] = useState<{
@@ -109,7 +111,14 @@ export function Settings({ activeProjectId, onProjectChange }: SettingsProps) {
     catch (e) { console.error(e); }
   }, []);
 
-  useEffect(() => { fetchProjects(); }, [fetchProjects]);
+  const fetchUser = useCallback(async () => {
+    setUserLoading(true);
+    try { setUser(await api.getMe()); }
+    catch (e) { console.error(e); }
+    finally { setUserLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchProjects(); fetchUser(); }, [fetchProjects, fetchUser]);
   useEffect(() => {
     if (activeProjectId) { fetchApiKeys(activeProjectId); setGeneratedKey(null); }
   }, [activeProjectId, fetchApiKeys]);
