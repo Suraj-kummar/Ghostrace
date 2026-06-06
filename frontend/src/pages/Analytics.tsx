@@ -420,9 +420,17 @@ export function Analytics({ projectId }: AnalyticsProps) {
     }));
   };
 
-  const donutData = (data?.top_models ?? []).map((m, i) => ({
+  const sortedModels = [...(data?.top_models ?? [])].sort((a, b) => {
+    return modelMetric === "calls" ? b.calls - a.calls : b.cost_usd - a.cost_usd;
+  });
+
+  const maxModelVal = sortedModels.length > 0
+    ? (modelMetric === "calls" ? Math.max(...sortedModels.map(m => m.calls)) : Math.max(...sortedModels.map(m => m.cost_usd)))
+    : 1;
+
+  const donutData = sortedModels.map((m, i) => ({
     label: m.model,
-    value: m.calls,
+    value: modelMetric === "calls" ? m.calls : m.cost_usd,
     color: MODEL_COLORS[i % MODEL_COLORS.length],
   }));
 
@@ -557,13 +565,34 @@ export function Analytics({ projectId }: AnalyticsProps) {
 
         {/* Model breakdown */}
         <div className="card" style={styles.panelCard}>
-          <div style={styles.panelHeader}>
-            <div style={{ ...styles.panelIcon, background: "rgba(99,102,241,0.12)" }}>
-              <Cpu size={16} style={{ color: "var(--color-primary-light)" }} />
+          <div style={{ ...styles.panelHeader, justifyContent: "space-between", alignItems: "center", display: "flex", width: "100%" }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+              <div style={{ ...styles.panelIcon, background: "rgba(99,102,241,0.12)" }}>
+                <Cpu size={16} style={{ color: "var(--color-primary-light)" }} />
+              </div>
+              <div>
+                <h2 style={styles.panelTitle}>Model Usage</h2>
+                <p style={styles.panelSub}>
+                  {modelMetric === "calls" ? "Top models by call volume" : "Top models by total cost"}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 style={styles.panelTitle}>Model Usage</h2>
-              <p style={styles.panelSub}>Top models by call volume</p>
+            {/* Metric Switcher */}
+            <div style={styles.miniTabs}>
+              {(["calls", "cost"] as const).map((m) => (
+                <button
+                  key={m}
+                  style={{
+                    ...styles.miniTab,
+                    background: modelMetric === m ? "var(--color-primary-glow)" : "transparent",
+                    color: modelMetric === m ? "var(--color-primary-light)" : "var(--text-secondary)",
+                    borderColor: modelMetric === m ? "rgba(99, 102, 241, 0.3)" : "transparent",
+                  }}
+                  onClick={() => setModelMetric(m)}
+                >
+                  {m}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -571,7 +600,7 @@ export function Analytics({ projectId }: AnalyticsProps) {
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {[...Array(3)].map((_, i) => <div key={i} className="skeleton" style={{ height: 44, borderRadius: 8 }} />)}
             </div>
-          ) : data?.top_models.length ? (
+          ) : sortedModels.length ? (
             <div style={styles.modelLayout}>
               {/* Donut chart */}
               <div style={{ flexShrink: 0 }}>
@@ -580,9 +609,10 @@ export function Analytics({ projectId }: AnalyticsProps) {
 
               {/* Legend + rows */}
               <div style={styles.modelList}>
-                {data.top_models.map((m, i) => {
+                {sortedModels.map((m, i) => {
                   const color = MODEL_COLORS[i % MODEL_COLORS.length];
-                  const maxCalls = data.top_models[0].calls;
+                  const barVal = modelMetric === "calls" ? m.calls : m.cost_usd;
+                  const barPercent = (barVal / maxModelVal) * 100;
                   return (
                     <div key={m.model} style={styles.modelRow}>
                       <div style={styles.modelRowTop}>
@@ -599,7 +629,7 @@ export function Analytics({ projectId }: AnalyticsProps) {
                       <div style={styles.modelBar}>
                         <div style={{
                           ...styles.modelBarFill,
-                          width: `${(m.calls / maxCalls) * 100}%`,
+                          width: `${barPercent}%`,
                           background: color,
                         }} />
                       </div>
