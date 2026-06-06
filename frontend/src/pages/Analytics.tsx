@@ -35,8 +35,15 @@ interface AnalyticsData {
   error_sessions: number;
   loop_sessions: number;
   avg_latency_ms: number;
+  avg_session_duration_ms?: number | null;
   daily: DailyMetric[];
   top_models: ModelStat[];
+  error_rate_daily?: {
+    date: string;
+    total_sessions: number;
+    error_sessions: number;
+    error_rate: number;
+  }[];
 }
 
 // ─── Pure-SVG chart primitives ────────────────────────────────────────────────
@@ -307,12 +314,13 @@ export function Analytics({ projectId }: AnalyticsProps) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeChart, setActiveChart] = useState<"sessions" | "cost" | "tokens" | "errors">("sessions");
+  const [period, setPeriod] = useState<number>(30);
 
   const fetch = async () => {
     if (!projectId) return;
     setLoading(true);
     try {
-      setData(await api.getAnalytics(projectId));
+      setData(await api.getAnalyticsWithPeriod(projectId, period));
     } catch (e) {
       console.error(e);
     } finally {
@@ -320,7 +328,7 @@ export function Analytics({ projectId }: AnalyticsProps) {
     }
   };
 
-  useEffect(() => { fetch(); }, [projectId]);
+  useEffect(() => { fetch(); }, [projectId, period]);
 
   if (!projectId) {
     return (
