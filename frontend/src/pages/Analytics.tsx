@@ -315,7 +315,7 @@ const MODEL_COLORS = [
 export function Analytics({ projectId }: AnalyticsProps) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeChart, setActiveChart] = useState<"sessions" | "cost" | "tokens" | "errors">("sessions");
+  const [activeChart, setActiveChart] = useState<"sessions" | "cost" | "tokens" | "errors" | "error_rate">("sessions");
   const [period, setPeriod] = useState<number>(30);
 
   const fetch = async () => {
@@ -399,9 +399,25 @@ export function Analytics({ projectId }: AnalyticsProps) {
     { key: "cost",     label: "Cost",     color: "#34d399" },
     { key: "tokens",   label: "Tokens",   color: "#38bdf8" },
     { key: "errors",   label: "Errors",   color: "#f43f5e" },
+    { key: "error_rate", label: "Error Rate", color: "#fb7185" },
   ];
 
   const activeTab = chartTabs.find(t => t.key === activeChart)!;
+
+  const getChartData = () => {
+    if (!data) return [];
+    if (activeChart === "error_rate") {
+      return (data.error_rate_daily ?? []).map((d) => ({
+        date: d.date,
+        value: d.error_rate * 100,
+      }));
+    }
+    const key = activeChart === "cost" ? "cost_usd" : activeChart;
+    return data.daily.map((d) => ({
+      date: d.date,
+      value: Number(d[key as keyof DailyMetric] || 0),
+    }));
+  };
 
   const donutData = (data?.top_models ?? []).map((m, i) => ({
     label: m.model,
@@ -509,10 +525,10 @@ export function Analytics({ projectId }: AnalyticsProps) {
           {loading ? (
             <div className="skeleton" style={{ height: 140, borderRadius: 8 }} />
           ) : data ? (
-            activeChart === "cost" ? (
-              <BarChartSVG data={data.daily} valueKey="cost_usd" color={activeTab.color} height={140} />
+            activeChart === "cost" || activeChart === "error_rate" ? (
+              <BarChartSVG data={getChartData()} color={activeTab.color} height={140} />
             ) : (
-              <AreaChart data={data.daily} valueKey={activeChart} color={activeTab.color} height={140} />
+              <AreaChart data={getChartData()} color={activeTab.color} height={140} />
             )
           ) : null}
         </div>
