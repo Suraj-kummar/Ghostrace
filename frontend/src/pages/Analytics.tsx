@@ -378,6 +378,15 @@ export function Analytics({ projectId }: AnalyticsProps) {
           subColor: "var(--text-muted)",
         },
         {
+          icon: <Clock size={18} />,
+          iconColor: "#a78bfa",
+          iconBg: "rgba(167,139,250,0.12)",
+          label: "Avg Duration",
+          value: data.avg_session_duration_ms ? formatDuration(data.avg_session_duration_ms) : "—",
+          sub: "per agent session",
+          subColor: "var(--text-muted)",
+        },
+        {
           icon: <AlertCircle size={18} />,
           iconColor: data.error_sessions > 0 ? "#f43f5e" : "#10b981",
           iconBg: data.error_sessions > 0 ? "rgba(244,63,94,0.12)" : "rgba(16,185,129,0.12)",
@@ -450,7 +459,7 @@ export function Analytics({ projectId }: AnalyticsProps) {
       {/* ── Stat cards ── */}
       {loading ? (
         <div style={styles.metricsGrid}>
-          {[...Array(4)].map((_, i) => (
+          {[...Array(5)].map((_, i) => (
             <div key={i} className="card skeleton" style={{ height: 100 }} />
           ))}
         </div>
@@ -717,7 +726,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   pageSub: { fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.5 },
 
-  metricsGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18 },
+  metricsGrid: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 18 },
   metricCard: { padding: 0, overflow: "hidden", cursor: "default", position: "relative" },
   metricAccent: { position: "absolute", top: 0, left: 0, right: 0, height: 2, borderRadius: "14px 14px 0 0" },
   metricBody: { display: "flex", gap: 16, alignItems: "center", padding: "20px 22px" },
