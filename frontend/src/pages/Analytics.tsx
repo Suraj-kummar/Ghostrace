@@ -684,6 +684,25 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   pageHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between" },
+  periodGroup: {
+    display: "flex",
+    background: "var(--bg-glass)",
+    border: "1px solid var(--border-color)",
+    borderRadius: 10,
+    padding: 3,
+    gap: 2,
+  },
+  periodBtn: {
+    padding: "6px 12px",
+    fontSize: 12,
+    fontWeight: 600,
+    border: "1px solid transparent",
+    borderRadius: 8,
+    cursor: "pointer",
+    transition: "all 0.15s",
+    outline: "none",
+    fontFamily: "var(--font-sans)",
+  },
   pageTitle: {
     fontFamily: "var(--font-heading)", fontSize: 30, fontWeight: 700, letterSpacing: "-0.5px",
     background: "linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%)",
