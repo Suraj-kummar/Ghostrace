@@ -418,15 +418,7 @@ export function Settings({ activeProjectId, onProjectChange }: SettingsProps) {
                     </div>
                     <div style={styles.newKeyRow}>
                       <code style={styles.newKeyCode}>{generatedKey}</code>
-                      <button
-                        className="btn btn-secondary"
-                        style={styles.copyInlineBtn}
-                        onClick={() => copyToClipboard(generatedKey, "new_key")}
-                      >
-                        {copiedKeyId === "new_key"
-                          ? <Check size={13} style={{ color: "var(--color-success)" }} />
-                          : <Copy size={13} />}
-                      </button>
+                      <CopyButton text={generatedKey} label="Copy" successLabel="Copied" />
                     </div>
                   </div>
                 )}
