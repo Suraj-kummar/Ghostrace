@@ -303,6 +303,12 @@ function formatLatency(ms: number) {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
 }
 
+function formatDuration(ms: number) {
+  if (ms >= 60000) return `${(ms / 60000).toFixed(1)}m`;
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${ms.toFixed(0)}ms`;
+}
+
 const MODEL_COLORS = [
   "#818cf8", "#34d399", "#38bdf8", "#fbbf24",
   "#f472b6", "#a78bfa", "#fb923c", "#4ade80",
