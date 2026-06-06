@@ -683,6 +683,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   copyInlineBtn: { padding: "0 14px", borderRadius: "0 8px 8px 0", borderLeft: "none" },
 
+  accountCard: { padding: 24, marginBottom: 24, display: "flex", flexDirection: "column", gap: 16 },
+  accountHeader: { display: "flex", alignItems: "flex-start", gap: 14 },
+  accountBody: { display: "flex", gap: 32, flexWrap: "wrap" },
+  accountField: { display: "flex", flexDirection: "column", gap: 4, minWidth: 150 },
+  accountFieldLabel: { fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" },
+  accountFieldValue: { fontSize: 14, fontWeight: 600, color: "var(--text-primary)" },
+
   sdkCard: { padding: 28 },
   sdkHeader: { display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 },
   sdkSteps: { display: "flex", flexDirection: "column", gap: 20 },
