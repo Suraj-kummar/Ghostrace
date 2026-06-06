@@ -722,6 +722,14 @@ const styles: Record<string, React.CSSProperties> = {
   accountFieldLabel: { fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" },
   accountFieldValue: { fontSize: 14, fontWeight: 600, color: "var(--text-primary)" },
 
+  dangerZoneCard: { padding: 24, marginTop: 24, display: "flex", flexDirection: "column", gap: 16, border: "1px solid rgba(244,63,94,0.25)", background: "rgba(244,63,94,0.02)" },
+  dangerZoneHeader: { display: "flex", alignItems: "flex-start", gap: 14 },
+  dangerZoneBody: { display: "flex", flexDirection: "column", gap: 12 },
+  dangerZoneAction: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20, flexWrap: "wrap" },
+  dangerZoneLabel: { fontSize: 14, fontWeight: 700, color: "var(--text-primary)" },
+  dangerZoneDesc: { fontSize: 12, color: "var(--text-secondary)", marginTop: 4, lineHeight: 1.5, maxWidth: 500 },
+  deleteAccountBtn: { background: "linear-gradient(135deg, #f43f5e, #e11d48)", color: "white", border: "none", boxShadow: "0 4px 16px rgba(244,63,94,0.25)" },
+
   sdkCard: { padding: 28 },
   sdkHeader: { display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 },
   sdkSteps: { display: "flex", flexDirection: "column", gap: 20 },
