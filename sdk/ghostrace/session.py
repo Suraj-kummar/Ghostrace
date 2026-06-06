@@ -78,8 +78,9 @@ class Session:
         """
         from .config import get_config
         config = get_config()
-        if not isinstance(key, str) or not isinstance(value, str):
-            raise ValueError("Tag key and value must be strings")
+        if not isinstance(key, str):
+            raise ValueError("Tag key must be a string")
+        value = str(value)
         if len(self.tags) >= config.max_tags and key not in self.tags:
             import logging
             logging.getLogger(__name__).warning(
