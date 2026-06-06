@@ -71,9 +71,48 @@ class Session:
     # ── Tag API ──────────────────────────────────────────────────────────────
 
     def tag(self, key: str, value: str) -> "Session":
-        """Attach a key/value tag to this session (chainable)."""
+        """Attach a key/value tag to this session (chainable).
+
+        Raises ValueError if key or value are not strings, or if the
+        session already has the maximum number of tags configured.
+        """
+        from .config import get_config
+        config = get_config()
+        if not isinstance(key, str) or not isinstance(value, str):
+            raise ValueError("Tag key and value must be strings")
+        if len(self.tags) >= config.max_tags and key not in self.tags:
+            import logging
+            logging.getLogger(__name__).warning(
+                "ghostrace: session tag limit (%d) reached; ignoring tag '%s'",
+                config.max_tags,
+                key,
+            )
+            return self
         self.tags[key] = str(value)
         return self
+
+    def bulk_tag(self, tags: dict) -> "Session":
+        """Attach multiple tags at once (chainable).
+
+        Args:
+            tags: A dict of str → str pairs. Non-string values are coerced via str().
+        """
+        for k, v in tags.items():
+            self.tag(str(k), str(v))
+        return self
+
+    def remove_tag(self, key: str) -> "Session":
+        """Remove a tag by key (chainable). No-op if key does not exist."""
+        self.tags.pop(key, None)
+        return self
+
+    def has_tag(self, key: str, value: str | None = None) -> bool:
+        """Return True if the tag key exists (and optionally matches value)."""
+        if key not in self.tags:
+            return False
+        if value is not None:
+            return self.tags[key] == value
+        return True
 
     # ── Sync context manager ─────────────────────────────────────────────────
 
