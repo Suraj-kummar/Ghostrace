@@ -50,12 +50,10 @@ interface AnalyticsData {
 
 function AreaChart({
   data,
-  valueKey,
   color,
   height = 120,
 }: {
-  data: DailyMetric[];
-  valueKey: keyof DailyMetric;
+  data: { date: string; value: number }[];
   color: string;
   height?: number;
 }) {
@@ -64,12 +62,12 @@ function AreaChart({
   const innerW = width - pad.left - pad.right;
   const innerH = height - pad.top - pad.bottom;
 
-  const values = data.map((d) => Number(d[valueKey]));
+  const values = data.map((d) => d.value);
   const max = Math.max(...values, 1);
 
   const pts = data.map((d, i) => {
     const x = pad.left + (i / Math.max(data.length - 1, 1)) * innerW;
-    const y = pad.top + innerH - (Number(d[valueKey]) / max) * innerH;
+    const y = pad.top + innerH - (d.value / max) * innerH;
     return [x, y] as [number, number];
   });
 
@@ -80,8 +78,8 @@ function AreaChart({
   const areaPath =
     `${linePath} L${pts[pts.length - 1][0]},${pad.top + innerH} L${pts[0][0]},${pad.top + innerH} Z`;
 
-  // X-axis labels — show every 7th day
   const labelStep = Math.ceil(data.length / 5);
+  const chartId = `grad-${color.replace("#", "")}`;
 
   return (
     <svg
@@ -90,7 +88,7 @@ function AreaChart({
       style={{ width: "100%", height }}
     >
       <defs>
-        <linearGradient id={`grad-${valueKey}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={chartId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.35" />
           <stop offset="100%" stopColor={color} stopOpacity="0.01" />
         </linearGradient>
@@ -112,7 +110,7 @@ function AreaChart({
       })}
 
       {/* Area fill */}
-      <path d={areaPath} fill={`url(#grad-${valueKey})`} />
+      <path d={areaPath} fill={`url(#${chartId})`} />
 
       {/* Line */}
       <path d={linePath} fill="none" stroke={color} strokeWidth="1.8"
@@ -142,12 +140,10 @@ function AreaChart({
 
 function BarChartSVG({
   data,
-  valueKey,
   color,
   height = 120,
 }: {
-  data: DailyMetric[];
-  valueKey: keyof DailyMetric;
+  data: { date: string; value: number }[];
   color: string;
   height?: number;
 }) {
@@ -156,11 +152,12 @@ function BarChartSVG({
   const innerW = width - pad.left - pad.right;
   const innerH = height - pad.top - pad.bottom;
 
-  const values = data.map((d) => Number(d[valueKey]));
+  const values = data.map((d) => d.value);
   const max = Math.max(...values, 1);
 
   const barW = Math.max(1, innerW / data.length - 2);
   const labelStep = Math.ceil(data.length / 5);
+  const chartId = `bgrad-${color.replace("#", "")}`;
 
   return (
     <svg
@@ -169,7 +166,7 @@ function BarChartSVG({
       style={{ width: "100%", height }}
     >
       <defs>
-        <linearGradient id={`bgrad-${valueKey}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={chartId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.9" />
           <stop offset="100%" stopColor={color} stopOpacity="0.3" />
         </linearGradient>
@@ -192,13 +189,12 @@ function BarChartSVG({
 
       {/* Bars */}
       {data.map((d, i) => {
-        const val = Number(d[valueKey]);
         const x = pad.left + (i / data.length) * innerW + 1;
-        const barH = (val / max) * innerH;
+        const barH = (d.value / max) * innerH;
         const y = pad.top + innerH - barH;
         return (
           <rect key={i} x={x} y={y} width={barW} height={barH}
-            fill={`url(#bgrad-${valueKey})`} rx="2" />
+            fill={`url(#${chartId})`} rx="2" />
         );
       })}
 
