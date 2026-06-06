@@ -247,6 +247,39 @@ export function Settings({ activeProjectId, onProjectChange }: SettingsProps) {
           )}
         </div>
 
+        {/* ── Account Profile panel ── */}
+        {user && (
+          <div className="card" style={styles.accountCard}>
+            <div style={styles.accountHeader}>
+              <div style={{ ...styles.panelIcon, background: "rgba(16,185,129,0.12)" }}>
+                <ShieldCheck size={16} style={{ color: "var(--color-success)" }} />
+              </div>
+              <div>
+                <h2 style={styles.panelTitle}>Account Profile</h2>
+                <p style={styles.panelDesc}>Logged in user and current subscription plan details.</p>
+              </div>
+            </div>
+            <div style={styles.accountBody}>
+              <div style={styles.accountField}>
+                <span style={styles.accountFieldLabel}>Email Address</span>
+                <span style={styles.accountFieldValue}>{user.email}</span>
+              </div>
+              <div style={styles.accountField}>
+                <span style={styles.accountFieldLabel}>Subscription Plan</span>
+                <span style={{ ...styles.accountFieldValue, textTransform: "uppercase", fontWeight: 700, color: "var(--color-primary-light)" }}>
+                  {user.plan} Plan
+                </span>
+              </div>
+              <div style={styles.accountField}>
+                <span style={styles.accountFieldLabel}>Status</span>
+                <span className="badge badge-success" style={{ fontSize: 10, alignSelf: "flex-start", marginTop: 4 }}>
+                  Active
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={styles.grid}>
           {/* ── Projects panel ── */}
           <div className="card" style={styles.panel}>
