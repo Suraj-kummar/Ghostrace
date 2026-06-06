@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { api } from "../services/api";
 import {
-  Copy, Check, Plus, Key, FolderOpen, AlertTriangle,
+  Plus, Key, FolderOpen, AlertTriangle,
   ShieldCheck, Terminal, Info, Trash2, X, AlertCircle,
   Loader
 } from "lucide-react";
+import CopyButton from "../components/CopyButton";
 
 interface SettingsProps {
   activeProjectId: string;
