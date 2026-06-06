@@ -8,13 +8,13 @@ async def test_projects_and_keys(client: AsyncClient):
     # 1. Sign up and get token
     signup_res = await client.post(
         "/api/auth/signup",
-        json={"email": "projects@ghostrace.dev", "password": "password123"},
+        json={"email": "projects@ghostrace.dev", "password": "SecurePass1!"},
     )
     assert signup_res.status_code == 201
 
     token_res = await client.post(
         "/api/auth/token",
-        data={"username": "projects@ghostrace.dev", "password": "password123"},
+        data={"username": "projects@ghostrace.dev", "password": "SecurePass1!"},
     )
     assert token_res.status_code == 200
     token = token_res.json()["access_token"]

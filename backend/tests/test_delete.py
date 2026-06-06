@@ -18,11 +18,11 @@ async def _run_delete_test(client: AsyncClient, settings):
     # 1. Sign up + login
     await client.post(
         "/api/auth/signup",
-        json={"email": "delete@ghostrace.dev", "password": "password123"},
+        json={"email": "delete@ghostrace.dev", "password": "SecurePass1!"},
     )
     token_res = await client.post(
         "/api/auth/token",
-        data={"username": "delete@ghostrace.dev", "password": "password123"},
+        data={"username": "delete@ghostrace.dev", "password": "SecurePass1!"},
     )
     token = token_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}

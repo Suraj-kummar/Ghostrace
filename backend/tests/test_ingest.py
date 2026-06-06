@@ -12,14 +12,14 @@ async def test_ingest_flow(client: AsyncClient, db_session: AsyncSession, settin
     # 1. Sign up user
     signup_res = await client.post(
         "/api/auth/signup",
-        json={"email": "ingest@ghostrace.dev", "password": "password123"},
+        json={"email": "ingest@ghostrace.dev", "password": "SecurePass1!"},
     )
     assert signup_res.status_code == 201
     user_id = signup_res.json()["id"]
 
     token_res = await client.post(
         "/api/auth/token",
-        data={"username": "ingest@ghostrace.dev", "password": "password123"},
+        data={"username": "ingest@ghostrace.dev", "password": "SecurePass1!"},
     )
     assert token_res.status_code == 200
     token = token_res.json()["access_token"]
