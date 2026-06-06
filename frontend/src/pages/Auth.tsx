@@ -15,6 +15,24 @@ export function Auth({ onLoginSuccess }: AuthProps) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Password strength meter
+  const getPasswordStrength = (pwd: string): { score: number; label: string; color: string } => {
+    if (pwd.length === 0) return { score: 0, label: "", color: "transparent" };
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/\d/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    const map: Record<number, { label: string; color: string }> = {
+      1: { label: "Weak", color: "#ef4444" },
+      2: { label: "Fair", color: "#f59e0b" },
+      3: { label: "Good", color: "#3b82f6" },
+      4: { label: "Strong", color: "#10b981" },
+    };
+    return { score, ...(map[score] || { label: "Weak", color: "#ef4444" }) };
+  };
+  const pwdStrength = getPasswordStrength(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -185,13 +203,16 @@ export function Auth({ onLoginSuccess }: AuthProps) {
                 className="btn btn-primary"
                 type="submit"
                 disabled={loading}
+                id={isLogin ? "login-submit-btn" : "signup-submit-btn"}
                 style={styles.submitBtn}
               >
                 {loading ? (
-                  <span style={styles.loadingDots}>
-                    <span />
-                    <span />
-                    <span />
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="16" height="16" viewBox="0 0 50 50" style={{ animation: "spin 0.8s linear infinite" }}>
+                      <circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="5" />
+                      <circle cx="25" cy="25" r="20" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeDasharray="80 40" />
+                    </svg>
+                    {isLogin ? "Signing in…" : "Creating account…"}
                   </span>
                 ) : (
                   <>
