@@ -137,4 +137,34 @@ export const api = {
       throw new Error(err.detail || "Failed to delete API key");
     }
   },
+
+  async deleteSession(sessionId: string) {
+    const token = localStorage.getItem("gr_token");
+    const res = await fetch(`/api/sessions/${sessionId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to delete session");
+    }
+  },
+
+  async getMe() {
+    return request("/api/auth/me");
+  },
+
+  async searchSessions(projectId: string, search: string, skip = 0, limit = 50) {
+    const params = new URLSearchParams({
+      project_id: projectId,
+      skip: String(skip),
+      limit: String(limit),
+    });
+    if (search) params.set("search", search);
+    return request(`/api/sessions/?${params.toString()}`);
+  },
+
+  async getAnalyticsWithPeriod(projectId: string, periodDays = 30) {
+    return request(`/api/projects/${projectId}/analytics?period_days=${periodDays}`);
+  },
 };
