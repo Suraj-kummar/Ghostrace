@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
 import {
@@ -15,8 +15,12 @@ export function Sessions({ projectId }: SessionsProps) {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [page, setPage] = useState(0);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const PAGE_SIZE = 20;
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
     try {
@@ -26,6 +30,39 @@ export function Sessions({ projectId }: SessionsProps) {
       console.error("Error fetching sessions", err);
     } finally {
       setLoading(false);
+    }
+  }, [projectId]);
+
+  const handleDelete = async (sessionId: string) => {
+    if (!window.confirm("Delete this session permanently?")) return;
+    setDeletingId(sessionId);
+    try {
+      await api.deleteSession(sessionId);
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+    } catch (err) {
+      console.error("Delete failed", err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleExport = async (sessionId: string) => {
+    setExportingId(sessionId);
+    try {
+      const resp = await fetch(`/api/sessions/${sessionId}/export`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
+      });
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `session-${sessionId.substring(0, 8)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed", err);
+    } finally {
+      setExportingId(null);
     }
   };
 
@@ -77,6 +114,9 @@ export function Sessions({ projectId }: SessionsProps) {
     if (filterType === "success") return !sessionHasError;
     return true;
   });
+
+  const totalPages = Math.ceil(filteredSessions.length / PAGE_SIZE);
+  const pagedSessions = filteredSessions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const formatTokens = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
@@ -234,7 +274,7 @@ export function Sessions({ projectId }: SessionsProps) {
                 ))}
               </div>
             ))
-          ) : filteredSessions.length === 0 ? (
+            filteredSessions.length === 0 ? (
             <div style={styles.emptyState}>
               <div style={styles.emptyIcon}>
                 <Zap size={28} style={{ color: "var(--text-muted)" }} />
@@ -247,7 +287,7 @@ export function Sessions({ projectId }: SessionsProps) {
               </p>
             </div>
           ) : (
-            filteredSessions.map((session, idx) => {
+            pagedSessions.map((session, idx) => {
               const sessionHasError = session.events?.some(
                 (e: any) => e.event_type === "error" || e.error_type
               );
@@ -333,11 +373,15 @@ export function Sessions({ projectId }: SessionsProps) {
 
                   {/* Duration */}
                   <div style={styles.tableCell}>
-                    <span style={styles.numValue}>{formatLatency(sessionLatency)}</span>
+                    <span style={styles.numValue}>
+                      {session.duration_ms != null
+                        ? formatLatency(session.duration_ms)
+                        : formatLatency(sessionLatency)}
+                    </span>
                   </div>
 
-                  {/* Action */}
-                  <div style={{ ...styles.tableCell, textAlign: "right" }}>
+                  {/* Actions */}
+                  <div style={{ ...styles.tableCell, textAlign: "right", gap: 6 }}>
                     <Link
                       to={`/sessions/${session.id}`}
                       className="btn btn-secondary"
@@ -346,6 +390,22 @@ export function Sessions({ projectId }: SessionsProps) {
                       Inspect
                       <ChevronRight size={13} />
                     </Link>
+                    <button
+                      title="Export JSON"
+                      disabled={exportingId === session.id}
+                      onClick={() => handleExport(session.id)}
+                      style={{ ...styles.inspectBtn, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: '#38bdf8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', borderRadius: 7, padding: '6px 10px', fontSize: 12 }}
+                    >
+                      ⬇
+                    </button>
+                    <button
+                      title="Delete session"
+                      disabled={deletingId === session.id}
+                      onClick={() => handleDelete(session.id)}
+                      style={{ ...styles.inspectBtn, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', borderRadius: 7, padding: '6px 10px', fontSize: 12 }}
+                    >
+                      🗑
+                    </button>
                   </div>
                 </div>
               );
@@ -353,11 +413,20 @@ export function Sessions({ projectId }: SessionsProps) {
           )}
         </div>
 
+        {/* Pagination */}
+        {!loading && totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '12px 24px', borderTop: '1px solid var(--border-color)' }}>
+            <button disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ padding: '6px 14px', borderRadius: 7, border: '1px solid var(--border-color)', background: 'var(--bg-glass)', color: 'var(--text-secondary)', cursor: page === 0 ? 'default' : 'pointer', opacity: page === 0 ? 0.4 : 1 }}>← Prev</button>
+            <span style={{ padding: '6px 12px', color: 'var(--text-muted)', fontSize: 13 }}>{page + 1} / {totalPages}</span>
+            <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ padding: '6px 14px', borderRadius: 7, border: '1px solid var(--border-color)', background: 'var(--bg-glass)', color: 'var(--text-secondary)', cursor: page >= totalPages - 1 ? 'default' : 'pointer', opacity: page >= totalPages - 1 ? 0.4 : 1 }}>Next →</button>
+          </div>
+        )}
+
         {/* Footer count */}
         {!loading && filteredSessions.length > 0 && (
           <div style={styles.tableFooter}>
             <span>
-              Showing <b>{filteredSessions.length}</b> of <b>{sessions.length}</b> sessions
+              Showing <b>{pagedSessions.length}</b> of <b>{filteredSessions.length}</b> sessions
             </span>
           </div>
         )}
