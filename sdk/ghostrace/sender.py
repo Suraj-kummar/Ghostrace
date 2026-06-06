@@ -32,6 +32,7 @@ from .config import get_config
 
 logger = logging.getLogger(__name__)
 
+# Default retry delays — overridden at runtime by config.retry_attempts / retry_backoff_base
 _RETRY_DELAYS = (1.0, 2.0, 4.0)
 
 
@@ -126,7 +127,12 @@ class HttpSender:
         config = get_config()
         buffered_path_str: Optional[str] = payload.pop("_buffered_path", None)
 
-        for attempt, delay in enumerate(_RETRY_DELAYS, start=1):
+        # Build retry schedule from config
+        retry_delays = tuple(
+            config.retry_backoff_base * (2 ** i)
+            for i in range(config.retry_attempts)
+        )
+        for attempt, delay in enumerate(retry_delays, start=1):
             try:
                 response = await client.post(
                     f"{config.base_url}/v1/ingest",
@@ -134,7 +140,8 @@ class HttpSender:
                     headers={
                         "Authorization": f"Bearer {config.api_key}",
                         "Content-Type": "application/json",
-                        "X-Ghostrace-SDK": "python/0.2.0",
+                        "X-Ghostrace-SDK": config.sdk_user_agent,
+                        "User-Agent": config.sdk_user_agent,
                     },
                     timeout=10.0,
                 )
@@ -155,17 +162,17 @@ class HttpSender:
                     "ghostrace: HTTP %d on attempt %d/%d",
                     response.status_code,
                     attempt,
-                    len(_RETRY_DELAYS),
+                    len(retry_delays),
                 )
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "ghostrace: send error on attempt %d/%d: %s",
                     attempt,
-                    len(_RETRY_DELAYS),
+                    len(retry_delays),
                     exc,
                 )
 
-            if attempt < len(_RETRY_DELAYS):
+            if attempt < len(retry_delays):
                 await asyncio.sleep(delay)
 
         # All retries exhausted — write to local buffer
