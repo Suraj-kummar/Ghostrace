@@ -317,6 +317,7 @@ export function Analytics({ projectId }: AnalyticsProps) {
   const [loading, setLoading] = useState(false);
   const [activeChart, setActiveChart] = useState<"sessions" | "cost" | "tokens" | "errors" | "error_rate">("sessions");
   const [period, setPeriod] = useState<number>(30);
+  const [modelMetric, setModelMetric] = useState<"calls" | "cost">("calls");
 
   const fetch = async () => {
     if (!projectId) return;
